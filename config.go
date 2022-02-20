@@ -11,20 +11,104 @@
 // your rights to distribute this software.
 //
 
-package main
+package gnotes
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
-	"github.com/vaughan0/go-ini"
+	"github.com/wildwest-productions/goini"
 )
 
 const appID = "wst.gnotes"
 
-func getFileFromConfig(file string) string {
+type Config struct {
+	Account accountConfig `ini:"account"`
+	App     appSettings   `ini:"settings"`
+	S3      S3Config      `ini:"s3"`
+	Crypt   cryptConfig   `ini:"encrypt"`
+}
+
+// TODO: impment me
+type accountConfig struct {
+	User  string `ini:"user"`
+	Token string `ini:"token"`
+}
+
+type cryptConfig struct {
+	Enable bool   `ini:"enable"`
+	Key    string `ini:"key"`
+}
+
+type appSettings struct {
+	Editor  string `ini:"editor"`
+	NoteDir string `ini:"notes_dir"`
+}
+
+type S3Config struct {
+	Active    bool   `ini:"active"`
+	Bucket    string `ini:"bucket"`
+	Endpoint  string `ini:"endpoint"`
+	Region    string `ini:"region"`
+	File      string `ini:"file"`
+	AccessKey string `ini:"accesskey"`
+	SecretKey string `ini:"secretkey"`
+}
+
+func LoadConfig() *Config {
+	conf := &Config{
+		Account: accountConfig{
+			User:  "",
+			Token: "",
+		},
+		App: appSettings{
+			Editor:  "vim",
+			NoteDir: "/tmp",
+		},
+		S3: S3Config{
+			Active:    false,
+			Bucket:    "",
+			Endpoint:  "",
+			Region:    "",
+			File:      "change-me",
+			AccessKey: "",
+			SecretKey: "",
+		},
+		Crypt: cryptConfig{
+			Enable: false,
+			Key:    "",
+		},
+	}
+
+	configFile := GetFileFromConfig("config.ini")
+
+	iniBytes, err := ioutil.ReadFile(configFile)
+	if err != nil {
+		log.Printf("Error opening: %s", configFile)
+		return conf
+	}
+
+	err = goini.Unmarshal(iniBytes, &conf)
+	if err != nil {
+		log.Printf("Error unmarshaling file: %s", err)
+	}
+
+	// Replace the ${HOME} string in the NoteDir if needed
+	home, err := os.UserHomeDir()
+	if err != nil {
+		log.Printf("Error getting home dir: %s", err)
+		return conf
+	}
+	conf.App.NoteDir = strings.ReplaceAll(conf.App.NoteDir, "${HOME}", home)
+
+	return conf
+}
+
+func GetFileFromConfig(file string) string {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return ""
@@ -53,56 +137,9 @@ func getFileFromConfig(file string) string {
 }
 
 func getConfigFile() string {
-	return getFileFromConfig("config.ini")
+	return GetFileFromConfig("config.ini")
 }
 
 func getLocalSaveFile() string {
-	return getFileFromConfig("notes.json")
-}
-
-func getConfigValue(header, key string, panicIfEmpty bool) string {
-	file, err := ini.LoadFile(getConfigFile())
-	if err != nil {
-		panic(err)
-	}
-
-	value, ok := file.Get(header, key)
-
-	if panicIfEmpty && !ok {
-		log.Fatalf("%s/%s not set in %s\n", header, key, getConfigFile())
-	}
-
-	return value
-}
-
-func getUseS3() bool {
-	return getConfigValue("s3", "active", false) == "true"
-}
-
-func getS3FileName() string {
-	return getConfigValue("s3", "savefile", true)
-}
-
-func getS3AccessKey() string {
-	return getConfigValue("s3", "accesskey", true)
-}
-
-func getS3SecretKey() string {
-	return getConfigValue("s3", "secretkey", true)
-}
-
-func getS3Region() string {
-	return getConfigValue("s3", "region", true)
-}
-
-func getS3Bucket() string {
-	return getConfigValue("s3", "bucket", true)
-}
-
-func getS3Endpoint() string {
-	return getConfigValue("s3", "endpoint", true)
-}
-
-func getEditor() string {
-	return getConfigValue("settings", "editor", true)
+	return GetFileFromConfig("notes.json")
 }

@@ -15,8 +15,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/spf13/pflag"
 	"log"
+
+	"github.com/WestleyR/gnotes"
+	"github.com/spf13/pflag"
 )
 
 var Version string = "v0.1.0"
@@ -24,13 +26,16 @@ var Version string = "v0.1.0"
 func main() {
 	helpFlag := pflag.BoolP("help", "h", false, "print this help output.")
 	versionFlag := pflag.BoolP("version", "V", false, "print srm version.")
+	uploadFileFlag := pflag.StringP("add-file", "a", "", "add an attachment file.")
+	skipDownloadFlag := pflag.BoolP("skip-download", "s", false, "skips downloading the note file, used for devs, or if starting notes from scratch.")
+	newNoteFlag := pflag.BoolP("reset", "R", false, "dont fail if local notes dont exist, DANGER: could delete all existing notes!")
 
 	pflag.Parse()
 
 	if *helpFlag {
 		fmt.Printf("Copyright (c) 2021 WestleyR. All rights reserved.\n")
 		fmt.Printf("This software is licensed under the terms of The Clear BSD License.\n")
-		fmt.Printf("Source code: https://github.com/.../gnotes\n")
+		fmt.Printf("Source code: https://github.com/WestleyR/gnotes\n")
 		fmt.Printf("\n")
 		pflag.Usage()
 		return
@@ -42,19 +47,42 @@ func main() {
 	}
 
 	// Init the self app
-	self, err := initApp(getFileFromConfig("config.ini"))
+	app, err := gnotes.InitApp(gnotes.GetFileFromConfig("config.ini"))
 	if err != nil {
 		log.Fatalf("Failed to init app: %s\n", err)
 	}
 
+	// Set the cli opts
+	app.CliOpts.SkipDownload = *skipDownloadFlag
+	app.CliOpts.NewNote = *newNoteFlag
+
+	// Setup the gui (cli)
+	gui := newGUI()
+
 	// Load the notes either from s3, or local stash
-	err = self.loadNotes()
+	err = app.LoadNotes()
 	if err != nil {
 		log.Fatalf("Failed to load notes: %s\n", err)
 	}
 
+	// Before starting the ui, see if theres anything to be done first
+	if *uploadFileFlag != "" {
+		err := app.NewAttachment(*uploadFileFlag)
+		if err != nil {
+			log.Fatalf("Failed to add attachment: %s", err)
+		}
+
+		err = app.SaveNotes()
+		if err != nil {
+			log.Fatalf("Failed to save notes: %s", err)
+		}
+
+		// After uploading the file, just quit
+		return
+	}
+
 	// Start the app
-	self.loadUI()
+	gui.loadUI(app)
 
 	fmt.Println("END")
 }

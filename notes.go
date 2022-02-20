@@ -11,246 +11,380 @@
 // your rights to distribute this software.
 //
 
-package main
+package gnotes
 
 import (
-	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
-	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/rivo/tview"
+	"github.com/google/uuid"
+	"golang.org/x/tools/godoc/util"
 )
 
-type appConfigs struct {
-	editor      string
-	s3Active    bool
-	s3Bucket    string
-	s3Endpoint  string
-	s3Region    string
-	s3SaveFile  string
-	s3AccessKey string
-	s3SecretKey string
-}
+type SelfApp struct {
+	// Notes
+	Notes *NoteSpec
 
-type selfApp struct {
-	notes    []*note
-	noteList *tview.List
+	// UI
+	//	app      *tview.Application
+	//	noteList *tview.List
+	uiLoaded bool
 
 	// On exit, dont upload if notes did not change
-	notesChanged bool
+	NotesChanged bool
 
-	app *tview.Application
+	// CLI opts
+	CliOpts CliOpts
 
-	// TODO: is it okay to store all the configs in the running app?
-	// changes wont apply until the app is restarted.
-	config appConfigs
+	Config *Config
 }
 
-type note struct {
-	DateCreated int64
-	DateMod     int64
-
-	Content string
+type CliOpts struct {
+	SkipDownload bool
+	NewNote      bool
 }
 
-func initApp(configPath string) (selfApp, error) {
-	var app selfApp
+type NoteSpec struct {
+	Notes []NoteInfo `json:"notes"`
+}
 
-	app.notesChanged = false
+type NoteInfo struct {
+	Dir      string `json:"dir"`
+	File     string `json:"file"`
+	Created  int64  `json:"created"`
+	Modified int64  `json:"modified"`
+	Hash     string `json:"hash"`
 
-	// TODO: dont open/close the config file for every settings,
-	// need to open the file once.
-	app.config.editor = getEditor()
-	app.config.s3Active = getUseS3()
-	app.config.s3Bucket = getS3Bucket()
-	app.config.s3Endpoint = getS3Endpoint()
-	app.config.s3Region = getS3Region()
-	app.config.s3SaveFile = getS3FileName()
-	app.config.s3AccessKey = getS3AccessKey()
-	app.config.s3SecretKey = getS3SecretKey()
+	// For attachments
+	IsAttachment    bool   `json:"attachment"`
+	AttachmentTitle string `json:"attachment_title"`
+	Size            int64  `json:"size"`
+	Type            string `json:"type"` // TODO:
+}
+
+func InitApp(configPath string) (*SelfApp, error) {
+	app := &SelfApp{}
+
+	app.NotesChanged = false
+
+	app.Config = LoadConfig()
+
+	app.Notes = new(NoteSpec)
+
+	app.CliOpts.SkipDownload = false
+	app.CliOpts.NewNote = false
 
 	return app, nil
 }
 
-// getTitleForNote returns the first line of the note
-func getTitleForNote(content string) string {
-	return strings.Split(content, "\n")[0]
+func (n NoteInfo) Title(noteDir string) string {
+	if n.IsAttachment {
+		return "Attachment: " + n.AttachmentTitle
+	}
+
+	notePath := filepath.Join(noteDir, "gnotes", n.File)
+
+	r, err := os.Open(notePath)
+	if err != nil {
+		return "[error]"
+	}
+	defer r.Close()
+
+	head := make([]byte, 64)
+	_, err = r.Read(head)
+	if err != nil {
+		return "[error]"
+	}
+
+	if string(head[:]) == "" {
+		// Note should be removed if its empty
+		return "[empty]"
+	}
+
+	return strings.ReplaceAll(string(head[:]), "\n", " ")
 }
 
-func getSubContentForNote(n *note) string {
-	c := time.Unix(n.DateCreated, 0)
-	m := time.Unix(n.DateMod, 0)
+func (a NoteInfo) Info() string {
+	if a.IsAttachment {
+		c := time.Unix(a.Created, 0)
+		return fmt.Sprintf("Type %s, created on %s. %s", a.Type, c.Format("2006-01-02"), formatBytes(a.Size))
+	}
+
+	c := time.Unix(a.Created, 0)
+	m := time.Unix(a.Modified, 0)
 
 	return fmt.Sprintf("Created on %s. last modified on %s", c.Format("2006-01-02"), m.Format("2006-01-02"))
 }
 
-func (self *selfApp) newNote() error {
+func (self *SelfApp) NewAttachment(path string) error {
+	src, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("failed to open file for new attachment: %s", err)
+	}
+	defer src.Close()
+
+	stat, err := src.Stat()
+	if err != nil {
+		return fmt.Errorf("failed to stat file: %s", err)
+	}
+
+	u := uuid.NewString()
 	createdTime := time.Now().Unix()
 
-	newNote := &note{
-		DateCreated: createdTime,
-		DateMod:     createdTime,
-		Content:     "",
-	}
-
-	self.notes = append(self.notes, newNote)
-
-	// Append the new note
-	self.noteList.AddItem(self.notes[len(self.notes)-1].Content, "[new_note]", getShortcutForIndex(len(self.notes)-1), func() {
-		err := self.openNote(self.noteList.GetCurrentItem() - 1)
-		if err != nil {
-			log.Fatalf("Failed opening note index: %d: %s\n", self.noteList.GetCurrentItem()-1, err)
-		}
-	})
-
-	// Open the new note
-	return self.openNote(len(self.notes) - 1)
-}
-
-func (self *selfApp) openNote(index int) error {
-	// Quit the app before opening the text editor
-	self.app.Stop()
-
-	// First, write the note to a file so the editor can open it
-	tmpFile := "/tmp/wst.gnotes.current-note"
-	err := os.WriteFile(tmpFile, []byte(self.notes[index].Content), 0600)
+	// TODO: dont read the whole file into memory
+	fileContents, err := os.ReadFile(path)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to read file: %s", err)
 	}
 
-	// Run the command to open the text file with the specified editor
-	cmd := exec.Command(self.config.editor, tmpFile)
-	cmd.Stdout = os.Stdout
-	cmd.Stdin = os.Stdin
-	cmd.Stderr = os.Stderr
+	if util.IsText(fileContents) {
+		// Its a text file, so it needs to be added to notes, not attachments
+		// TODO: add flag to disable this
+		// TODO: add size limit to disable this
+		log.Printf("Adding as not since it seems to be a text file")
+		return self.NewNoteWithContentsOfFile(path, nil)
+	}
 
-	err = cmd.Run()
+	newAttachment := NoteInfo{
+		File:            u,
+		IsAttachment:    true,
+		AttachmentTitle: filepath.Base(path),
+		Created:         createdTime,
+		Type:            "unknown file",
+		Size:            stat.Size(),
+		Hash:            "na",
+	}
+
+	err = self.Config.S3.S3UploadFileTo(path, u)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to upload file: %s", err)
 	}
 
-	// Now read the note back into the struct
-	n, err := os.ReadFile(tmpFile)
-	if err != nil {
-		return err
-	}
-
-	// Update the mod time only if the content has changed
-	if self.notes[index].Content != string(n) {
-		// User edited a note, so make sure to upload on exit
-		self.notesChanged = true
-		self.notes[index].DateMod = time.Now().Unix()
-	}
-
-	self.notes[index].Content = string(n)
-
-	if self.notes[index].Content == "" {
-		// User wants to delete this note
-		self.notes = append(self.notes[:index], self.notes[index+1:]...)
-	}
-
-	// Resort the notes
-	sortByModTime(self.notes)
-
-	self.loadUI()
+	self.Notes.Notes = append(self.Notes.Notes, newAttachment)
+	self.NotesChanged = true
 
 	return nil
 }
 
-func sortByModTime(notes []*note) {
+func (self *SelfApp) NewNoteWithContentsOfFile(path string, completion func()) error {
+	createdTime := time.Now().Unix()
+
+	uuidP := uuid.NewString()
+
+	newNote := NoteInfo{
+		Dir:      "notes/" + uuidP,
+		File:     "notes/" + uuidP + "/content",
+		Created:  createdTime,
+		Modified: createdTime,
+		// TODO: Need to generate a hash
+		Hash: "na",
+	}
+
+	notePath := filepath.Join(self.Config.App.NoteDir, "gnotes", newNote.File)
+
+	err := os.MkdirAll(filepath.Join(self.Config.App.NoteDir, "gnotes", newNote.Dir), 0755)
+	if err != nil {
+		return err
+	}
+
+	// Copy the data (if theres any)
+	if path != "" {
+		in, err := os.Open(path)
+		if err != nil {
+			return fmt.Errorf("failed to open contents of file: %s", err)
+		}
+		defer in.Close()
+
+		out, err := os.Create(notePath)
+		if err != nil {
+			return fmt.Errorf("failed to create file: %s", err)
+		}
+
+		defer out.Close()
+
+		_, err = io.Copy(out, in)
+		if err != nil {
+			return fmt.Errorf("failed to copy: %s", err)
+		}
+
+		err = out.Sync()
+		if err != nil {
+			return fmt.Errorf("failed to sync: %s", err)
+		}
+	}
+
+	self.Notes.Notes = append(self.Notes.Notes, newNote)
+	self.NotesChanged = true
+
+	// If the ui is not loaded, then just return and dont open the note
+	//	if !self.uiLoaded {
+	//		log.Printf("not adding item to ui")
+	//		return nil
+	//	}
+
+	// Append the new note
+	//	self.noteList.AddItem("hello", "[new_note]", getShortcutForIndex(len(self.notes.Notes)-1), func() {
+	//		err := self.openNote(self.noteList.GetCurrentItem() - 1)
+	//		if err != nil {
+	//			log.Fatalf("Failed opening note index: %d: %s\n", self.noteList.GetCurrentItem()-1, err)
+	//		}
+	//	})
+
+	// Open the new note
+	if completion != nil {
+		completion()
+	}
+	//return self.openNote(len(self.Notes.Notes) - 1)
+	return nil
+}
+
+func (self *SelfApp) NewNote(completion func()) error {
+	return self.NewNoteWithContentsOfFile("", completion)
+}
+
+//func (self *SelfApp) openNote(index int) error {
+//	// Quit the app before opening the text editor
+//	//self.app.Stop()
+//
+//	if self.notes.Notes[index].IsAttachment {
+//		action := ""
+//
+//		fmt.Printf(`Do you want to:
+//  d      - Download
+//  e      - Edit name
+//  delete - Delete the attachment
+//  b      - Back
+//: `)
+//		fmt.Scanln(&action)
+//
+//		switch action {
+//		case "d":
+//			downloadTo := self.notes.Notes[index].AttachmentTitle
+//			fmt.Printf("Downloading %s to %s...\n", downloadTo, downloadTo)
+//
+//			err := self.config.S3.s3DownloadFileFrom(self.notes.Notes[index].File, downloadTo)
+//			if err != nil {
+//				return fmt.Errorf("failed to download attachment: %s", err)
+//			}
+//
+//			fmt.Printf("Downloaded attachment (%s) to: %s\n", self.notes.Notes[index].Title(""), downloadTo)
+//		case "e":
+//			return fmt.Errorf("not impmented")
+//		case "delete":
+//			fmt.Printf("Deleting %s...\n", self.notes.Notes[index].Title(""))
+//			err := self.config.S3.Delete(self.notes.Notes[index].File)
+//			if err != nil {
+//				return fmt.Errorf("failed to delete file from s3: %s", err)
+//			}
+//
+//			self.Notes.Notes = append(self.notes.Notes[:index], self.notes.Notes[index+1:]...)
+//			self.NotesChanged = true
+//
+//			sortByModTime(self.notes.Notes)
+//			//self.loadUI()
+//		case "b":
+//			//self.loadUI()
+//		default:
+//			return fmt.Errorf("unknown input: %s", action)
+//		}
+//
+//		return nil
+//	}
+//
+//	// Run the command to open the text file with the specified editor
+//	editFile := filepath.Join(self.config.App.NoteDir, "gnotes", self.notes.Notes[index].File)
+//	cmd := exec.Command(self.config.App.Editor, editFile)
+//	cmd.Stdout = os.Stdout
+//	cmd.Stdin = os.Stdin
+//	cmd.Stderr = os.Stderr
+//
+//	err := cmd.Run()
+//	if err != nil {
+//		return err
+//	}
+//
+//	// Check if the file is empty
+//	r, err := os.Open(editFile)
+//	if err != nil {
+//		return fmt.Errorf("failed to open file: %s", err)
+//	}
+//	defer r.Close()
+//
+//	b, err := os.ReadFile(editFile)
+//	if err != nil {
+//		return fmt.Errorf("failed to read file: %s", err)
+//	}
+//
+//	if string(b) == "" {
+//		// Note is empty, so delete it
+//		err := os.RemoveAll(filepath.Join(self.config.App.NoteDir, "gnotes", self.notes.Notes[index].Dir))
+//		if err != nil {
+//			return fmt.Errorf("failed to delete empty note: %s", err)
+//		}
+//
+//		self.notes.Notes = append(self.notes.Notes[:index], self.notes.Notes[index+1:]...)
+//
+//		self.notesChanged = true
+//
+//		sortByModTime(self.notes.Notes)
+//		//self.loadUI()
+//
+//		return nil
+//	}
+//
+//	newSha, err := Sha1File(editFile)
+//	if err != nil {
+//		return fmt.Errorf("failed to sha file: %s", err)
+//	}
+//
+//	if self.notes.Notes[index].Hash != newSha {
+//		// Note changed
+//		self.notes.Notes[index].Hash = newSha
+//		self.notes.Notes[index].Modified = time.Now().Unix()
+//		self.notesChanged = true
+//	}
+//
+//	// Resort the notes
+//	sortByModTime(self.notes.Notes)
+//
+//	//self.loadUI()
+//
+//	return nil
+//}
+
+func (n *NoteSpec) Sort() {
 	sorting := true
 
 	for sorting {
 		sorting = false
-		for i := 0; i < len(notes)-1; i++ {
-			if notes[i].DateMod < notes[i+1].DateMod {
-				tmp := notes[i]
-				notes[i] = notes[i+1]
-				notes[i+1] = tmp
+		for i := 0; i < len(n.Notes)-1; i++ {
+			if n.Notes[i].Modified < n.Notes[i+1].Modified {
+				tmp := n.Notes[i]
+				n.Notes[i] = n.Notes[i+1]
+				n.Notes[i+1] = tmp
 				sorting = true
 			}
 		}
 	}
 }
 
-func (self *selfApp) loadNotes() error {
-	// Always use the config dir for save files as backups.
-	noteFile := getLocalSaveFile()
-
-	// Download the a tmp file first, just in case the download fails,
-	// and we lose all our notes
-	downloadNote := "/tmp/gnotes.download.notes.json"
-
-	// Only download from s3 if active = true
-	if self.config.s3Active {
-		err := s3DownloadFile(self.config.s3SaveFile, downloadNote)
-		if err != nil {
-			return fmt.Errorf("error downloading the save file: %s: %s\n", self.config.s3SaveFile, err)
-		}
-	}
-
-	// If not using s3, then only use the local saved notes
-	if !self.config.s3Active {
-		downloadNote = noteFile
-	}
-
-	fmt.Printf("DOWNLOADED: %s\n", downloadNote)
-	fmt.Printf("NOTE_FILE: %s\n", noteFile)
-
-	// Now read the downloaded file
-	downloadedJson, err := os.ReadFile(downloadNote)
-	if err != nil {
-		return err
-	}
-
-	if self.config.s3Active {
-		if string(downloadedJson) == "" {
-			return fmt.Errorf("downloaded notes are empty; aborting")
-		}
-	}
-
-	fmt.Printf("FROM FILE: %s\n", string(downloadedJson))
-
-	if string(downloadedJson) != "" {
-		err = json.Unmarshal(downloadedJson, &self.notes)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Now sort the notes by mod time
-	sortByModTime(self.notes)
-
-	return nil
-}
-
-func (self *selfApp) saveNotes() error {
-	var jsonData []byte
-	jsonData, err := json.Marshal(self.notes)
-	if err != nil {
-		return err
-	}
-
-	// Always use the config dir for save files as backups.
-	saveFile := getLocalSaveFile()
-
-	err = os.WriteFile(saveFile, jsonData, 0600)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Errored uploading notes. Just in case, you can recover your notes from this string: %v\n", jsonData)
-		return err
-	}
-
-	if self.config.s3Active {
-		err = s3UploadFile(saveFile, self.config.s3SaveFile)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Errored uploading notes. Just in case, you can recover your notes from this string: %v\n", jsonData)
-			return err
-		}
-	}
-
-	return nil
-}
+//func sortByModTime(notes []NoteInfo) {
+//	sorting := true
+//
+//	for sorting {
+//		sorting = false
+//		for i := 0; i < len(notes)-1; i++ {
+//			if notes[i].Modified < notes[i+1].Modified {
+//				tmp := notes[i]
+//				notes[i] = notes[i+1]
+//				notes[i+1] = tmp
+//				sorting = true
+//			}
+//		}
+//	}
+//}
