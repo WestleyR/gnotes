@@ -8,7 +8,11 @@ int main() {
 	printf("Download response: %s\n", foo);
 	free(foo);
 
-	foo = Save("notes_changed=true");
+	foo = List("");
+	printf("List response: %s\n", foo);
+	free(foo);
+
+	foo = Save("notes_changed=yes");
 	printf("Save response: %s\n", foo);
 	free(foo);
 

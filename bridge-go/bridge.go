@@ -14,52 +14,15 @@ import "C"
 
 import (
 	"log"
-	"strings"
+	"os"
+	"path/filepath"
 
 	"github.com/WestleyR/gnotes"
 )
 
-func parseInput(input, question string) bool {
-	if input != "" {
-		for _, op := range strings.Split(input, " ") {
-			opts := strings.Split(op, "=")
-
-			if len(opts) != 2 {
-				log.Fatalf("invalid input: %q", op)
-			}
-
-			switch opts[0] {
-			case question:
-				return opts[1] == "true"
-			}
-		}
-	}
-
-	return false
-}
-
 func getApp(input string) *gnotes.SelfApp {
-	// Parse the input
-	skipDownload := false
-	newNote := false
-
 	// Input example: `skip_download=true new_note=true`
-	if input != "" {
-		for _, op := range strings.Split(input, " ") {
-			opts := strings.Split(op, "=")
-
-			if len(opts) != 2 {
-				log.Fatalf("invalid input: %q", op)
-			}
-
-			switch opts[0] {
-			case "skip_download":
-			case "new_note":
-			default:
-				log.Printf("unknown input: %s", opts[0])
-			}
-		}
-	}
+	opts := parseInput(input)
 
 	// Init the self app
 	app, err := gnotes.InitApp(gnotes.GetFileFromConfig("config.ini"))
@@ -68,8 +31,8 @@ func getApp(input string) *gnotes.SelfApp {
 	}
 
 	// Set the cli opts
-	app.CliOpts.SkipDownload = skipDownload
-	app.CliOpts.NewNote = newNote
+	app.CliOpts.SkipDownload = isBool(opts["skip_download"])
+	app.CliOpts.NewNote = isBool(opts["new_note"])
 
 	return app
 }
@@ -90,7 +53,9 @@ func Download(input *C.char) *C.char {
 func Save(input *C.char) *C.char {
 	app := getApp(C.GoString(input))
 
-	app.NotesChanged = parseInput(C.GoString(input), "notes_changed")
+	opts := parseInput(C.GoString(input))
+
+	app.NotesChanged = isBool(opts["notes_changed"])
 
 	err := app.SaveNotes()
 	if err != nil {
@@ -98,4 +63,17 @@ func Save(input *C.char) *C.char {
 	}
 
 	return C.CString("notes saved")
+}
+
+//export List
+func List(input *C.char) *C.char {
+	app := getApp(C.GoString(input))
+
+	// Now read the downloaded file
+	noteJson, err := os.ReadFile(filepath.Join(app.Config.App.NoteDir, "gnotes", "notes/gnotes.json"))
+	if err != nil {
+		log.Fatalf("failed to read json: %s", err)
+	}
+
+	return C.CString(string(noteJson))
 }

@@ -70,6 +70,7 @@ extern "C" {
 
 extern char* Download(char* input);
 extern char* Save(char* input);
+extern char* List(char* input);
 
 #ifdef __cplusplus
 }
