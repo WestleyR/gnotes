@@ -8,6 +8,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -20,7 +21,11 @@ func tarCompress(src string) ([]byte, error) {
 	zr := gzip.NewWriter(buf)
 	tw := tar.NewWriter(zr)
 
-	filepath.Walk(src, func(file string, fi os.FileInfo, err error) error {
+	err := filepath.Walk(src, func(file string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("got error: %s", err)
+		}
+
 		header, err := tar.FileInfoHeader(fi, file)
 		if err != nil {
 			return err
@@ -46,6 +51,9 @@ func tarCompress(src string) ([]byte, error) {
 		}
 		return nil
 	})
+	if err != nil {
+		return []byte{}, fmt.Errorf("failed to open dir: %s", err)
+	}
 
 	if err := tw.Close(); err != nil {
 		return []byte{}, err
@@ -79,9 +87,7 @@ func untar(src []byte, dst string) error {
 			return err
 		}
 
-		target := header.Name
-
-		target = filepath.Join(dst, header.Name)
+		target := filepath.Join(dst, header.Name)
 
 		switch header.Typeflag {
 		case tar.TypeDir:

@@ -40,7 +40,6 @@ func newGUI() *gui {
 func (self *gui) loadUI(app *gnotes.SelfApp) {
 	self.app = tview.NewApplication()
 	self.noteList = tview.NewList()
-	//self.uiLoaded = true
 
 	self.reloadUI(app)
 
@@ -59,10 +58,13 @@ func (self *gui) reloadUI(app *gnotes.SelfApp) {
 
 	self.noteList.AddItem("Create new note", "", 'n', func() {
 		err := app.NewNote(func() {
-			self.openNote(app, len(app.Notes.Notes)-1)
+			err := self.openNote(app, len(app.Notes.Notes)-1)
+			if err != nil {
+				log.Printf("Error opening new note: %s", err)
+			}
 		})
 		if err != nil {
-			log.Fatalf("Failed creating new note: %s\n", err)
+			log.Printf("Failed creating new note: %s", err)
 		}
 	})
 
@@ -70,17 +72,14 @@ func (self *gui) reloadUI(app *gnotes.SelfApp) {
 		self.noteList.AddItem(n.Title(app.Config.App.NoteDir), n.Info(), getShortcutForIndex(i), func() {
 			err := self.openNote(app, self.noteList.GetCurrentItem()-1)
 			if err != nil {
-				log.Fatalf("Failed to open note at index: %d: %s\n", self.noteList.GetCurrentItem()-1, err)
+				log.Printf("Failed to open note at index: %d: %s", self.noteList.GetCurrentItem()-1, err)
 			}
 		})
 	}
 
 	self.noteList.AddItem("Quit", "Press to exit", 'q', func() {
+		// Stop the gui on quit. Will save the notes at main exit.
 		self.app.Stop()
-		err := app.SaveNotes()
-		if err != nil {
-			log.Fatalf("Failed to upload notes: %s\n", err)
-		}
 	})
 }
 
@@ -89,48 +88,60 @@ func (self *gui) openNote(app *gnotes.SelfApp, index int) error {
 	self.app.Stop()
 
 	if app.Notes.Notes[index].IsAttachment {
-		action := ""
+		for attempts := 0; attempts < 10; attempts++ {
+			succeed := true
+			action := ""
 
-		fmt.Printf(`Do you want to:
+			fmt.Printf(`Do you want to:
   d      - Download
   e      - Edit name
   delete - Delete the attachment
   b      - Back
 : `)
-		fmt.Scanln(&action)
+			fmt.Scanln(&action)
 
-		//s3Config := gnotes.GetS3Config()
+			switch action {
+			case "d":
+				downloadTo := app.Notes.Notes[index].AttachmentTitle
+				fmt.Printf("Downloading %s to %s...\n", downloadTo, downloadTo)
 
-		switch action {
-		case "d":
-			downloadTo := app.Notes.Notes[index].AttachmentTitle
-			fmt.Printf("Downloading %s to %s...\n", downloadTo, downloadTo)
+				err := app.Config.S3.S3DownloadFileFrom(app.Notes.Notes[index].File, downloadTo)
+				if err != nil {
+					return fmt.Errorf("failed to download attachment: %s", err)
+				}
 
-			err := app.Config.S3.S3DownloadFileFrom(app.Notes.Notes[index].File, downloadTo)
-			if err != nil {
-				return fmt.Errorf("failed to download attachment: %s", err)
+				fmt.Printf("Downloaded attachment (%s) to: %s\n", app.Notes.Notes[index].Title(""), downloadTo)
+				self.loadUI(app)
+			case "e":
+				return fmt.Errorf("not impmented")
+			case "delete":
+				fmt.Printf("Deleting %s...\n", app.Notes.Notes[index].Title(""))
+				err := app.Config.S3.Delete(app.Notes.Notes[index].File)
+				if err != nil {
+					return fmt.Errorf("failed to delete file from s3: %s", err)
+				}
+
+				app.Notes.Notes = append(app.Notes.Notes[:index], app.Notes.Notes[index+1:]...)
+				app.NotesChanged = true
+
+				app.Notes.Sort()
+				self.loadUI(app)
+			case "b":
+				self.loadUI(app)
+			default:
+				log.Printf("Unknown input: %s", action)
+				time.Sleep(1 * time.Second)
+				succeed = false
 			}
 
-			fmt.Printf("Downloaded attachment (%s) to: %s\n", app.Notes.Notes[index].Title(""), downloadTo)
-		case "e":
-			return fmt.Errorf("not impmented")
-		case "delete":
-			fmt.Printf("Deleting %s...\n", app.Notes.Notes[index].Title(""))
-			err := app.Config.S3.Delete(app.Notes.Notes[index].File)
-			if err != nil {
-				return fmt.Errorf("failed to delete file from s3: %s", err)
+			if succeed {
+				break
 			}
 
-			app.Notes.Notes = append(app.Notes.Notes[:index], app.Notes.Notes[index+1:]...)
-			app.NotesChanged = true
-
-			app.Notes.Sort()
-			//sortByModTime(notes)
-			//self.loadUI()
-		case "b":
-			//self.loadUI()
-		default:
-			return fmt.Errorf("unknown input: %s", action)
+			// Yes, I know, loop of 10. But I want to be able to print a message if over.
+			if attempts >= 9 {
+				return fmt.Errorf("too many attempts")
+			}
 		}
 
 		return nil
@@ -172,7 +183,6 @@ func (self *gui) openNote(app *gnotes.SelfApp, index int) error {
 		app.NotesChanged = true
 
 		app.Notes.Sort()
-		//app.Notes.SortByModTime()
 		self.loadUI(app)
 
 		return nil
@@ -191,7 +201,6 @@ func (self *gui) openNote(app *gnotes.SelfApp, index int) error {
 	}
 
 	// Resort the notes
-	//sortByModTime(self.notes.Notes)
 	app.Notes.Sort()
 
 	self.loadUI(app)

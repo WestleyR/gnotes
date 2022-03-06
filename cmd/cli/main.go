@@ -84,5 +84,11 @@ func main() {
 	// Start the app
 	gui.loadUI(app)
 
+	// Always save the notes if needed
+	err = app.SaveNotes()
+	if err != nil {
+		log.Fatalf("Failed to upload notes: %s", err)
+	}
+
 	fmt.Println("END")
 }

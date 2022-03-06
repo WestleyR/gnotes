@@ -30,11 +30,6 @@ type SelfApp struct {
 	// Notes
 	Notes *NoteSpec
 
-	// UI
-	//	app      *tview.Application
-	//	noteList *tview.List
-	uiLoaded bool
-
 	// On exit, dont upload if notes did not change
 	NotesChanged bool
 

@@ -135,11 +135,3 @@ func GetFileFromConfig(file string) string {
 
 	return configFile
 }
-
-func getConfigFile() string {
-	return GetFileFromConfig("config.ini")
-}
-
-func getLocalSaveFile() string {
-	return GetFileFromConfig("notes.json")
-}

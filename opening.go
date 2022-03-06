@@ -123,6 +123,7 @@ func (self *SelfApp) SaveNotes() error {
 		}
 	}
 
+	// Only upload if notes changed
 	if self.NotesChanged {
 		if self.Config.S3.Active {
 			err = self.Config.S3.S3UploadFile(filepath.Join(self.Config.App.NoteDir, "gnotes.tar.gz"))
