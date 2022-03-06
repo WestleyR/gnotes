@@ -26,6 +26,12 @@ all: $(TARGET_CLI)
 $(TARGET_CLI): $(SRC)
 	$(GO) build $(GOFLAGS) -o $(TARGET_CLI) ./cmd/cli
 
+generate: $(SRC)
+	go build -buildmode c-shared -o bridge-c/gnotes-bridge.so bridge-go/*.go
+
+build-c: generate
+	gcc example-c/main.c bridge-c/gnotes-bridge.so
+
 clean:
 	rm -f $(TARGET_GNOTES) $(TARGET_CLI)
 
