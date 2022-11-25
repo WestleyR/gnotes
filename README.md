@@ -1,21 +1,20 @@
 # GNOTES - Terminal based S3 syncing note app
 
+![screenshot](./.images/gnotes_demo_screenshot.png)
+
 **A WIP app. This is my local code and may not work for you. But you may
 find this useful.**
 
 Before using, you need access to a S3 server. Otherwise it will only save notes
 locally, and may not work correctly.
 
-_[screenshot here...]_
-
 ## How it works
 
 GNOTES syncs all notes and attachments to a s3 server. v1 branch will store all
-notes (not attachments) in one tarball. Every separate note is contained into
-that one file. With v2, each note is a seprate file on s3. This greatly
-improves download and upload speed when saving notes. Also, each note is
-checked with a sha1sum checksum to avoid downloading the notes if its already
-cached locally.
+notes (not attachments) in one tarball. Every note is contained into that one
+file. With v2, each note is a seprate file on s3. This greatly improves download
+and upload speed when saving notes. Also, each note is checked with a sha1sum
+checksum to avoid downloading the notes if its already cached locally.
 
 In v2, all notes and attachments are compressed, and encrypted before uploading
 to the s3 server.
@@ -73,6 +72,8 @@ After a fresh install, you first need to run gnotes with these flags:
 $ gnotes -s -R
 ```
 
+Then create a new note with some content.
+
 The `-s` tells gnotes to skip the download, and `-R` for not looking for local
 cache.
 
@@ -80,6 +81,12 @@ Run `gnotes --help` for other flags or help.
 
 **After the inital creation, do not use those flags. Otherwise you may lose
 data**
+
+## Basic usage
+
+To delete a note, just select it with the ui and delete all content with your
+editor. With vim type `:%d` as an example. Then save, exit, and it will be
+deleted. Make sure all lines are removed.
 
 ## Bugs
 
