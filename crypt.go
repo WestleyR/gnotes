@@ -8,20 +8,14 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
-	"log"
 )
 
-func (c *cryptConfig) EncryptIfEnabled(data []byte) ([]byte, error) {
-	if !c.Enable {
-		log.Printf("Not encrypting notes.")
-		return data, nil
-	}
-
-	if c.Key == "" {
+func (c *S3Config) Encrypt(data []byte) ([]byte, error) {
+	if c.CryptKey == "" {
 		return []byte{}, fmt.Errorf("need a 16 bit key")
 	}
 
-	block, err := aes.NewCipher([]byte(c.Key))
+	block, err := aes.NewCipher([]byte(c.CryptKey))
 	if err != nil {
 		return []byte{}, fmt.Errorf("could not create new cipher: %s", err)
 	}
@@ -36,20 +30,11 @@ func (c *cryptConfig) EncryptIfEnabled(data []byte) ([]byte, error) {
 	stream := cipher.NewCFBEncrypter(block, iv)
 	stream.XORKeyStream(encData[aes.BlockSize:], data)
 
-	log.Printf("Successfully encrypted data")
-
 	return encData, nil
 }
 
-func (c *cryptConfig) DecryptIfEnabled(data []byte) ([]byte, error) {
-	// Always try to decrypt the data, this way the user can disable encryption,
-	// and get their encrypted notes, and it can be decrypted.
-
-	if c.Key == "" {
-		return []byte{}, fmt.Errorf("need a 16 bit key")
-	}
-
-	block, err := aes.NewCipher([]byte(c.Key))
+func (c *S3Config) Decrypt(data []byte) ([]byte, error) {
+	block, err := aes.NewCipher([]byte(c.CryptKey))
 	if err != nil {
 		return []byte{}, fmt.Errorf("could not create new cipher: %s", err)
 	}

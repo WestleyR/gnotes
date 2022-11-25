@@ -14,129 +14,136 @@ package gnotes
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-
-	"github.com/h2non/filetype"
 )
 
-func (self *SelfApp) LoadNotes() error {
-	downloadNote := filepath.Join(self.Config.App.NoteDir, "gnotes.tar.gz")
+func (self *SelfApp) downloadIndexIfNeeded() error {
+	noteSha := filepath.Join(self.Config.App.NoteDir, "notes", "index.json.sha256")
 
-	// Only download from s3 if active = true
-	if self.Config.S3.Active {
-		if !self.CliOpts.SkipDownload {
-			err := self.Config.S3.S3DownloadFile(downloadNote)
-			if err != nil {
-				return fmt.Errorf("error downloading the save file: %s: %s\n", self.Config.S3.File, err)
-			}
+	err := self.Config.S3.DownloadFileFrom(
+		filepath.Join(self.Config.S3.UserID, "notes", "index.json.sha256"),
+		noteSha,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to download file: %w", err)
+	}
+
+	oldSha, err := Sha1File(filepath.Join(self.Config.App.NoteDir, "notes", "index.json"))
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("failed to read index.json file: %w", err)
 		}
 	}
 
-	// New scope so we dont keep it in memory for long
-	{
-		// Open the blob into memory
-		downloadedBytes, err := os.ReadFile(downloadNote)
+	newSha, err := os.ReadFile(noteSha)
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("failed to read note sha file: %w", err)
+		}
+	}
+
+	if string(newSha) != oldSha || oldSha == "" {
+		log.Printf("Downloading note index...\n")
+		noteIndex := filepath.Join(self.Config.App.NoteDir, "notes", "index.json")
+
+		err := self.Config.S3.DownloadFileFrom(
+			filepath.Join(self.Config.S3.UserID, "notes", "index.json"),
+			noteIndex,
+		)
 		if err != nil {
-			if !self.CliOpts.NewNote {
-				return fmt.Errorf("failed to open downloaded file: %s", err)
-			}
-			self.Notes.Sort()
-			//sortByModTime(self.Notes.Notes)
-			return nil
+			return err
 		}
 
-		// Check if the file is a tar, this may be existing notes and encryption is addon
-		kind, _ := filetype.Match(downloadedBytes)
-		if kind != filetype.NewType("gz", "application/gzip") {
-			// Decrypt if its enabled
-			downloadedBytes, err = self.Config.Crypt.DecryptIfEnabled(downloadedBytes)
-			if err != nil {
-				return fmt.Errorf("failed to decrypt data: %s", err)
-			}
-		} else {
-			log.Printf("WARNING: Notes are not encrypted")
-		}
-
-		// Now untar the notes
-		err = untar(downloadedBytes, filepath.Join(self.Config.App.NoteDir, "gnotes"))
+		// Verify sha after download
+		currentSha, err := Sha1File(noteIndex)
 		if err != nil {
-			if self.CliOpts.NewNote {
-				return fmt.Errorf("failed to untar: %s", err)
-			}
+			return fmt.Errorf("failed to get current sha: %w", err)
 		}
+		if currentSha != string(newSha) {
+			fmt.Printf("WARNING!!! Sha does not match!\n")
+			// TODO: probaly abort...
+		}
+	}
+
+	return nil
+}
+
+func (self *SelfApp) LoadNotes() error {
+	if self.CliOpts.NewNote {
+		log.Printf("skipping json reading since new note is specified")
+		return nil
+	}
+
+	err := self.downloadIndexIfNeeded()
+	if err != nil {
+		return err
 	}
 
 	// Now read the downloaded file
-	downloadedJson, err := os.ReadFile(filepath.Join(self.Config.App.NoteDir, "gnotes", "notes/gnotes.json"))
+	downloadedJson, err := os.ReadFile(filepath.Join(self.Config.App.NoteDir, "notes", "index.json"))
 	if err != nil {
 		return fmt.Errorf("failed to read json: %s", err)
 	}
 
 	err = json.Unmarshal(downloadedJson, &self.Notes)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to unmarshal json into notes: %w", err)
 	}
 
 	// Now sort the notes by mod time
 	self.Notes.Sort()
-	//sortByModTime(self.Notes.Notes)
 
 	return nil
 }
 
-func (self *SelfApp) SaveNotes() error {
-	var jsonData []byte
-	jsonData, err := json.Marshal(self.Notes)
+func (self *SelfApp) SaveIndexFile() error {
+	if !self.IndexNeedsUpdating {
+		log.Printf("Not uploading any changes\n")
+		return nil
+	}
+
+	// Create, and upload the index.json.sha256 and index.json
+
+	noteIndex := filepath.Join(self.Config.App.NoteDir, "notes", "index.json")
+
+	b, err := json.Marshal(self.Notes)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(noteIndex, b, 0664)
 	if err != nil {
 		return err
 	}
 
-	err = os.WriteFile(filepath.Join(self.Config.App.NoteDir, "gnotes", "notes/gnotes.json"), jsonData, 0644)
+	err = self.Config.S3.UploadFile(
+		noteIndex,
+		filepath.Join(self.Config.S3.UserID, "notes", "index.json"),
+	)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	// New scope to minimize time of large memory blobs
-	{
-		tarData, err := tarCompress(filepath.Join(self.Config.App.NoteDir, "gnotes"))
-		if err != nil {
-			return fmt.Errorf("failed to tar gzip compress: %s", err)
-		}
-
-		// Write the tar to the config dir as backup
-		err = writeNewFile(filepath.Join(self.Config.App.NoteDir, "gnotes.backup.tar.gz"), tarData)
-		if err != nil {
-			return fmt.Errorf("failed to write backup file: %s", err)
-		}
-
-		tarData, err = self.Config.Crypt.EncryptIfEnabled(tarData)
-		if err != nil {
-			return fmt.Errorf("failed to encrypt file: %s", err)
-		}
-
-		err = writeNewFile(filepath.Join(self.Config.App.NoteDir, "gnotes.tar.gz"), tarData)
-		if err != nil {
-			return fmt.Errorf("failed to write note file: %s", err)
-		}
-	}
-
-	// Only upload if notes changed
-	if self.NotesChanged {
-		if self.Config.S3.Active {
-			err = self.Config.S3.S3UploadFile(filepath.Join(self.Config.App.NoteDir, "gnotes.tar.gz"))
-			if err != nil {
-				return fmt.Errorf("failed to upload file: %s", err)
-			}
-		}
-	}
-
-	// Remove the open note directory to avoid note conflicts
-	err = os.RemoveAll(filepath.Join(self.Config.App.NoteDir, "gnotes"))
+	// Rewrite the sha file
+	sha, err := Sha1File(noteIndex)
 	if err != nil {
-		return fmt.Errorf("failed to remove dest dir: %s", err)
+		return err
+	}
+
+	err = os.WriteFile(noteIndex+".sha256", []byte(sha), 0664)
+	if err != nil {
+		return err
+	}
+
+	err = self.Config.S3.UploadFile(
+		noteIndex+".sha256",
+		filepath.Join(self.Config.S3.UserID, "notes", "index.json.sha256"),
+	)
+	if err != nil {
+		return err
 	}
 
 	return nil

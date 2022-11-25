@@ -16,12 +16,13 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/WestleyR/gnotes"
 	"github.com/spf13/pflag"
 )
 
-var Version string = "v0.1.0"
+var Version string = "v0.2.0"
 
 func main() {
 	helpFlag := pflag.BoolP("help", "h", false, "print this help output.")
@@ -29,6 +30,7 @@ func main() {
 	uploadFileFlag := pflag.StringP("add-file", "a", "", "add an attachment file.")
 	skipDownloadFlag := pflag.BoolP("skip-download", "s", false, "skips downloading the note file, used for devs, or if starting notes from scratch.")
 	newNoteFlag := pflag.BoolP("reset", "R", false, "dont fail if local notes dont exist, DANGER: could delete all existing notes!")
+	decryptFlag := pflag.StringP("decrypt", "d", "", "decrypt for devs")
 
 	pflag.Parse()
 
@@ -52,6 +54,20 @@ func main() {
 		log.Fatalf("Failed to init app: %s\n", err)
 	}
 
+	if *decryptFlag != "" {
+		b, err := os.ReadFile(*decryptFlag)
+		if err != nil {
+			log.Fatal(err)
+		}
+		b, err = app.Config.S3.Decrypt(b)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(b))
+
+		return
+	}
+
 	// Set the cli opts
 	app.CliOpts.SkipDownload = *skipDownloadFlag
 	app.CliOpts.NewNote = *newNoteFlag
@@ -67,12 +83,12 @@ func main() {
 
 	// Before starting the ui, see if theres anything to be done first
 	if *uploadFileFlag != "" {
-		err := app.NewAttachment(*uploadFileFlag)
+		err := app.Notes.Books[0].NewAttachment(app.Config.App.NoteDir, *uploadFileFlag)
 		if err != nil {
 			log.Fatalf("Failed to add attachment: %s", err)
 		}
 
-		err = app.SaveNotes()
+		err = app.SaveIndexFile()
 		if err != nil {
 			log.Fatalf("Failed to save notes: %s", err)
 		}
@@ -85,7 +101,7 @@ func main() {
 	gui.loadUI(app)
 
 	// Always save the notes if needed
-	err = app.SaveNotes()
+	err = app.SaveIndexFile()
 	if err != nil {
 		log.Fatalf("Failed to upload notes: %s", err)
 	}

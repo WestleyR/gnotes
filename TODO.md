@@ -1,5 +1,6 @@
 # TODO:
 
+## v1
  - [ ] Add "Save on ctrl-c exit" to config.ini
  - [x] Sort notes by date
  - [x] Dont upload notes if it did not change
@@ -14,4 +15,21 @@
  - [ ] Eventally have "note folders" to store notes in a diffrent tarball (to decrease the download size)
  - [ ] Add a --disable-encryption flag to disable the note encryption (will download all note objects and decrypt them)
  - [ ] Add debugging logs
+ - [x] Better recover on crash or fail to upload
+ - [ ] Still use the appLock incase there is more then one app active (at least for local app)
+
+## v2
+ - [x] Loop through all notes and compair checksum to see it it needs to be uploaded, instead of having a array to track that
+ - [x] Remove downloaded attachment encryption file after
+ - [x] Open a note, edit, close, open it again and the changes seem to me missing or redownloaded (should fix by re-updating a note with a function right away)
+ - [ ] Maybe should always update the index.json file after anything was changed? (not when the app closes)
+ - [ ] Creating an empty note, and exiting will call delete from s3 when it was not created (not really an issue)
+ - [x] Cannot download attachments
+ - [x] Fix sorting issues
+ - [ ] Fix c bindings
+ - [ ] Create an ios app to use this
+ - [ ] Use env parsing to get the variable in the config file, like HOME
+
+## v3 (not even started)
+ - [ ] Be diff based for even faster performance
 

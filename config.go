@@ -24,24 +24,11 @@ import (
 	"github.com/wildwest-productions/goini"
 )
 
-const appID = "wst.gnotes"
+const appID = "gnotes"
 
 type Config struct {
-	Account accountConfig `ini:"account"`
-	App     appSettings   `ini:"settings"`
-	S3      S3Config      `ini:"s3"`
-	Crypt   cryptConfig   `ini:"encrypt"`
-}
-
-// TODO: impment me
-type accountConfig struct {
-	User  string `ini:"user"`
-	Token string `ini:"token"`
-}
-
-type cryptConfig struct {
-	Enable bool   `ini:"enable"`
-	Key    string `ini:"key"`
+	App appSettings `ini:"settings"`
+	S3  S3Config    `ini:"s3"`
 }
 
 type appSettings struct {
@@ -57,14 +44,12 @@ type S3Config struct {
 	File      string `ini:"file"`
 	AccessKey string `ini:"accesskey"`
 	SecretKey string `ini:"secretkey"`
+	UserID    string `ini:"user_id"`
+	CryptKey  string `ini:"crypt_key"`
 }
 
-func LoadConfig() *Config {
+func LoadConfig(configFile string) *Config {
 	conf := &Config{
-		Account: accountConfig{
-			User:  "",
-			Token: "",
-		},
 		App: appSettings{
 			Editor:  "vim",
 			NoteDir: "/tmp",
@@ -77,14 +62,10 @@ func LoadConfig() *Config {
 			File:      "change-me",
 			AccessKey: "",
 			SecretKey: "",
-		},
-		Crypt: cryptConfig{
-			Enable: false,
-			Key:    "",
+			UserID:    "uuid_TODO",
+			CryptKey:  "",
 		},
 	}
-
-	configFile := GetFileFromConfig("config.ini")
 
 	iniBytes, err := ioutil.ReadFile(configFile)
 	if err != nil {

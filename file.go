@@ -29,7 +29,7 @@ func Sha1(s string) string {
 func Sha1File(file string) (string, error) {
 	b, err := ioutil.ReadFile(file)
 	if err != nil {
-		return "", fmt.Errorf("failed to read file: %s", err)
+		return "", fmt.Errorf("failed to read file: %w", err)
 	}
 
 	sha1 := Sha1(string(b))

@@ -15,6 +15,56 @@ import (
 	"strings"
 )
 
+func gzipCompressFile(file string) ([]byte, error) {
+	b, err := os.ReadFile(file)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return gzipCompress(b), nil
+}
+
+func gzipCompress(in []byte) []byte {
+	comp := bytes.NewBuffer(nil)
+	w := gzip.NewWriter(comp)
+	w.Write(in)
+	w.Close()
+
+	return comp.Bytes()
+}
+
+func gzipExtractFile(file string) ([]byte, error) {
+	b, err := os.ReadFile(file)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	ex, err := gzipExtract(b)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return ex, nil
+}
+
+func gzipExtract(in []byte) ([]byte, error) {
+	decmp := bytes.NewBuffer(nil)
+	decmp.Write(in)
+	r, err := gzip.NewReader(decmp)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	b, err := io.ReadAll(r)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	r.Close()
+
+	return b, nil
+}
+
 func tarCompress(src string) ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
 
@@ -66,7 +116,7 @@ func tarCompress(src string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// dst contains the end dir.
+// dst contains the end dir. Note: will not overide files, I think...
 func untar(src []byte, dst string) error {
 	buff := bytes.NewBuffer(nil)
 	buff.Write(src)
@@ -79,15 +129,18 @@ func untar(src []byte, dst string) error {
 	tr := tar.NewReader(zr)
 
 	for {
+		fmt.Println("FOO1")
 		header, err := tr.Next()
 		if err == io.EOF {
 			break
 		}
+		fmt.Println("FOO2")
 		if err != nil {
 			return err
 		}
 
 		target := filepath.Join(dst, header.Name)
+		fmt.Println("FOOBAR:", target)
 
 		switch header.Typeflag {
 		case tar.TypeDir:
@@ -97,6 +150,7 @@ func untar(src []byte, dst string) error {
 				}
 			}
 		case tar.TypeReg:
+			fmt.Println("WRITEING TO:", target)
 			fileToWrite, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
 			if err != nil {
 				return err

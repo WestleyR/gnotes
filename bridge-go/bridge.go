@@ -13,37 +13,49 @@ package main
 import "C"
 
 import (
+	"encoding/json"
 	"log"
-	"os"
-	"path/filepath"
 
 	"github.com/WestleyR/gnotes"
 )
 
-func getApp(input string) *gnotes.SelfApp {
-	// Input example: `skip_download=true new_note=true`
-	opts := parseInput(input)
+var app *gnotes.SelfApp
+
+//export InitApp
+func InitApp(input *C.char) *C.char {
+	// Input example: `config=/path/to/config skip_download=true new_note=true`
+	opts := parseInput(C.GoString(input))
+
+	var err error
 
 	// Init the self app
-	app, err := gnotes.InitApp(gnotes.GetFileFromConfig("config.ini"))
+	app, err = gnotes.InitApp(opts["config"])
 	if err != nil {
-		log.Fatalf("Failed to init app: %s\n", err)
+		log.Fatalf("Failed to init app: %s", err)
 	}
 
 	// Set the cli opts
 	app.CliOpts.SkipDownload = isBool(opts["skip_download"])
 	app.CliOpts.NewNote = isBool(opts["new_note"])
 
-	return app
+	return nil
+}
+
+//export NewNote
+func NewNote(input *C.char) *C.char {
+	err := app.NewNote(nil)
+	if err != nil {
+		log.Fatalf("failed to create new note: %s", err)
+	}
+
+	return C.CString("new note created")
 }
 
 //export Download
 func Download(input *C.char) *C.char {
-	app := getApp(C.GoString(input))
-
 	err := app.LoadNotes()
 	if err != nil {
-		log.Fatalf("Failed to load notes: %s\n", err)
+		log.Fatalf("Failed to load notes: %s", err)
 	}
 
 	return C.CString("notes downloaded")
@@ -51,8 +63,6 @@ func Download(input *C.char) *C.char {
 
 //export Save
 func Save(input *C.char) *C.char {
-	app := getApp(C.GoString(input))
-
 	opts := parseInput(C.GoString(input))
 
 	app.NotesChanged = isBool(opts["notes_changed"])
@@ -67,13 +77,10 @@ func Save(input *C.char) *C.char {
 
 //export List
 func List(input *C.char) *C.char {
-	app := getApp(C.GoString(input))
-
-	// Now read the downloaded file
-	noteJson, err := os.ReadFile(filepath.Join(app.Config.App.NoteDir, "gnotes", "notes/gnotes.json"))
+	jsonData, err := json.Marshal(app.Notes)
 	if err != nil {
-		log.Fatalf("failed to read json: %s", err)
+		log.Fatalf("failed to marshal json: %s", err)
 	}
 
-	return C.CString(string(noteJson))
+	return C.CString(string(jsonData))
 }

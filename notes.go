@@ -14,24 +14,27 @@
 package gnotes
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
+	"github.com/fvbommel/sortorder"
 	"github.com/google/uuid"
-	"golang.org/x/tools/godoc/util"
 )
 
 type SelfApp struct {
 	// Notes
-	Notes *NoteSpec
+	Notes *NoteBook
 
-	// On exit, dont upload if notes did not change
-	NotesChanged bool
+	// IndexNeedsUpdating indecates if the index file needs to be uploaded
+	// like if a new note was created.
+	IndexNeedsUpdating bool
 
 	// CLI opts
 	CliOpts CliOpts
@@ -44,70 +47,203 @@ type CliOpts struct {
 	NewNote      bool
 }
 
-type NoteSpec struct {
-	Notes []NoteInfo `json:"notes"`
+// This is a global config
+// TODO: use this more instead of passing s3config, noteDir to functions.
+var self *SelfApp
+
+// NoteBook is the collection of all sub-categroies.
+type NoteBook struct {
+	Books []*Book `json:"folders"`
 }
 
-type NoteInfo struct {
-	Dir      string `json:"dir"`
-	File     string `json:"file"`
+// Book contains all the notes for the Name of the sub-categroies.
+type Book struct {
+	// Name is the sub-dir name
+	Name string `json:"name"`
+	// Notes contains all the notes in the sub-dir
+	Notes []*Note `json:"notes"`
+}
+
+// Note is all the data for a specific note.
+type Note struct {
+	// S3Path is the path to the note on the s3 server. Also used for the local
+	// path when caching. eg. "catigory/uuid-1/content"
+	S3Path   string `json:"path"`
 	Created  int64  `json:"created"`
 	Modified int64  `json:"modified"`
 	Hash     string `json:"hash"`
+	Title    string `json:"title"`
 
 	// For attachments
 	IsAttachment    bool   `json:"attachment"`
 	AttachmentTitle string `json:"attachment_title"`
 	Size            int64  `json:"size"`
-	Type            string `json:"type"` // TODO:
 }
 
 func InitApp(configPath string) (*SelfApp, error) {
 	app := &SelfApp{}
 
-	app.NotesChanged = false
+	app.Config = LoadConfig(configPath)
 
-	app.Config = LoadConfig()
-
-	app.Notes = new(NoteSpec)
+	app.Notes = &NoteBook{
+		Books: []*Book{
+			&Book{
+				// Default
+				Name:  "Notes",
+				Notes: []*Note{},
+			},
+		},
+	}
 
 	app.CliOpts.SkipDownload = false
 	app.CliOpts.NewNote = false
 
+	self = app
+
 	return app, nil
 }
 
-func (n NoteInfo) Title(noteDir string) string {
+// Download will download the note if needed based on hash.
+func (n *Note) Download(noteDir string, s3Config S3Config) error {
+	// Skip if theres no hash (like for a newly created note).
+	if n.Hash == "" {
+		return nil
+	}
+
+	noteFile := filepath.Join(noteDir, "notes", n.S3Path)
+
+	currentHash, err := Sha1File(noteFile)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+
+	if n.Hash == currentHash {
+		log.Printf("Using cached note\n")
+		return nil
+	}
+
+	// Download the note
+
+	err = s3Config.DownloadFileFrom(filepath.Join(s3Config.UserID, "notes", n.S3Path), noteFile)
+	if err != nil {
+		return fmt.Errorf("failed to download file: %w", err)
+	}
+
+	// Verify the checksum again
+
+	currentHash, err = Sha1File(noteFile)
+	if err != nil {
+		return err
+	}
+
+	if n.Hash != currentHash {
+		fmt.Printf("WARNING!!! hash not the same!\n")
+	}
+
+	return nil
+}
+
+// Save will save a note to the s3 server. Should be called after editing. Will
+// NOT update the note index file. Does not update/upload if the checksum did not
+// change.
+func (n *Note) Save() error {
+	noteFile := filepath.Join(self.Config.App.NoteDir, "notes", n.S3Path)
+
+	currentHash, err := Sha1File(noteFile)
+	if err != nil {
+		return fmt.Errorf("failed to get checksum for local cached file: %w", err)
+	}
+
+	// Double check to make sure current hash is not empty
+	if currentHash != "" && n.Hash != currentHash {
+		// Upload the note that changed
+		err := self.Config.S3.UploadFile(
+			noteFile,
+			filepath.Join(self.Config.S3.UserID, "notes", n.S3Path),
+		)
+		if err != nil {
+			return err
+		}
+
+		// After uploading, update the hash tracker
+		n.Hash = currentHash
+		n.Changed()
+
+		self.IndexNeedsUpdating = true
+		return nil
+	}
+	log.Printf("Not uploading note since it has not changed")
+
+	return nil
+}
+
+// DeleteNote will delete a specific note. Will delete the note from s3 imetitly,
+// and reupload the index files.
+// TODO: dont keep passing s3 configs like this, need a better way, maybe a global config.
+func (self *SelfApp) DeleteNote(bookIndex, noteIndex int) error {
+	notePath := filepath.Dir(filepath.Join(self.Config.App.NoteDir, "notes", self.Notes.Books[bookIndex].Notes[noteIndex].S3Path))
+
+	log.Printf("Removing/deleting note: %s", notePath)
+
+	err := os.RemoveAll(notePath)
+	if err != nil {
+		return fmt.Errorf("failed to delete note: %w", err)
+	}
+
+	// Delete it from s3
+	err = self.Config.S3.Delete(filepath.Join(self.Config.S3.UserID, "notes", self.Notes.Books[bookIndex].Notes[noteIndex].S3Path))
+	if err != nil {
+		return fmt.Errorf("failed to delete note from s3: %w", err)
+	}
+
+	self.Notes.Books[bookIndex].Notes = append(self.Notes.Books[bookIndex].Notes[:noteIndex], self.Notes.Books[bookIndex].Notes[noteIndex+1:]...)
+
+	self.IndexNeedsUpdating = true
+
+	return nil
+}
+
+// GetTitle returns a title for a note. Requires the local cache path.
+// Should be ~/.cache/wst.gnotes/notes
+func (n *Note) GetTitle(noteDir string) string {
 	if n.IsAttachment {
 		return "Attachment: " + n.AttachmentTitle
 	}
 
-	notePath := filepath.Join(noteDir, "gnotes", n.File)
+	notePath := filepath.Join(noteDir, n.S3Path)
 
 	r, err := os.Open(notePath)
 	if err != nil {
-		return "[error]"
+		return n.Title
 	}
 	defer r.Close()
 
 	head := make([]byte, 64)
-	_, err = r.Read(head)
+	l, err := r.Read(head)
 	if err != nil {
-		return "[error]"
+		return "error: " + err.Error()
 	}
 
 	if string(head[:]) == "" {
 		// Note should be removed if its empty
-		return "[empty]"
+		return "empty"
 	}
 
-	return strings.ReplaceAll(string(head[:]), "\n", " ")
+	title := strings.ReplaceAll(string(head[:l]), "\n", " ")
+
+	if title == "" {
+		return n.Title
+	}
+
+	n.Title = title
+
+	return n.Title
 }
 
-func (a NoteInfo) Info() string {
+func (a *Note) Info() string {
 	if a.IsAttachment {
 		c := time.Unix(a.Created, 0)
-		return fmt.Sprintf("Type %s, created on %s. %s", a.Type, c.Format("2006-01-02"), formatBytes(a.Size))
+		return fmt.Sprintf("Created on %s. %s", c.Format("2006-01-02"), formatBytes(a.Size))
 	}
 
 	c := time.Unix(a.Created, 0)
@@ -116,7 +252,12 @@ func (a NoteInfo) Info() string {
 	return fmt.Sprintf("Created on %s. last modified on %s", c.Format("2006-01-02"), m.Format("2006-01-02"))
 }
 
-func (self *SelfApp) NewAttachment(path string) error {
+// Changed will update the modified date for a note.
+func (n *Note) Changed() {
+	n.Modified = time.Now().Unix()
+}
+
+func (book *Book) NewAttachment(noteDir, path string) error {
 	src, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("failed to open file for new attachment: %s", err)
@@ -128,66 +269,83 @@ func (self *SelfApp) NewAttachment(path string) error {
 		return fmt.Errorf("failed to stat file: %s", err)
 	}
 
-	u := uuid.NewString()
+	uuidP := uuid.NewString()
 	createdTime := time.Now().Unix()
 
 	// TODO: dont read the whole file into memory
-	fileContents, err := os.ReadFile(path)
-	if err != nil {
-		return fmt.Errorf("failed to read file: %s", err)
-	}
+	//fileContents, err := os.ReadFile(path)
+	//if err != nil {
+	//	return fmt.Errorf("failed to read file: %s", err)
+	//}
 
-	if util.IsText(fileContents) {
-		// Its a text file, so it needs to be added to notes, not attachments
-		// TODO: add flag to disable this
-		// TODO: add size limit to disable this
-		log.Printf("Adding as not since it seems to be a text file")
-		return self.NewNoteWithContentsOfFile(path, nil)
-	}
+	// TODO: add back later...
+	//	if util.IsText(fileContents) {
+	//		// Its a text file, so it needs to be added to notes, not attachments
+	//		// TODO: add flag to disable this
+	//		// TODO: add size limit to disable this
+	//		log.Printf("Adding as not since it seems to be a text file")
+	//		return book.NewNoteWithContentsOfFile(noteDir, path, nil)
+	//	}
 
-	newAttachment := NoteInfo{
-		File:            u,
+	newAttachment := &Note{
+		S3Path:          filepath.Join(book.Name, uuidP, filepath.Base(path)),
 		IsAttachment:    true,
 		AttachmentTitle: filepath.Base(path),
 		Created:         createdTime,
-		Type:            "unknown file",
 		Size:            stat.Size(),
-		Hash:            "na",
+		Hash:            "",
 	}
 
-	err = self.Config.S3.S3UploadFileTo(path, u)
+	notePath := filepath.Join(noteDir, "notes", newAttachment.S3Path)
+
+	err = os.MkdirAll(filepath.Dir(notePath), 0755)
 	if err != nil {
-		return fmt.Errorf("failed to upload file: %s", err)
+		return fmt.Errorf("failed to create new note dir: %w", err)
 	}
 
-	self.Notes.Notes = append(self.Notes.Notes, newAttachment)
-	self.NotesChanged = true
+	err = copyFileContents(path, notePath)
+	if err != nil {
+		return fmt.Errorf("failed to copy file: %w", err)
+	}
+
+	book.Notes = append(book.Notes, newAttachment)
+
+	self.IndexNeedsUpdating = true
+
+	err = newAttachment.Save()
+	if err != nil {
+		return fmt.Errorf("failed to upload new attachment: %w", err)
+	}
 
 	return nil
 }
 
-func (self *SelfApp) NewNoteWithContentsOfFile(path string, completion func()) error {
+func (book *Book) NewNoteWithContentsOfFile(noteDir, path string, completion func()) error {
 	createdTime := time.Now().Unix()
 
 	uuidP := uuid.NewString()
 
-	newNote := NoteInfo{
-		Dir:      "notes/" + uuidP,
-		File:     "notes/" + uuidP + "/content",
+	newNote := &Note{
+		S3Path:   filepath.Join(book.Name, uuidP, "content"),
 		Created:  createdTime,
 		Modified: createdTime,
-		// TODO: Need to generate a hash
-		Hash: "na",
+		Hash:     "",
 	}
 
-	notePath := filepath.Join(self.Config.App.NoteDir, "gnotes", newNote.File)
+	notePath := filepath.Join(noteDir, "notes", newNote.S3Path)
 
-	err := os.MkdirAll(filepath.Join(self.Config.App.NoteDir, "gnotes", newNote.Dir), 0755)
+	err := os.MkdirAll(filepath.Dir(notePath), 0755)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create new note dir: %w", err)
+	}
+
+	err = os.WriteFile(notePath, []byte{}, 0664)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %w", err)
 	}
 
 	// Copy the data (if theres any)
+	// TODO: use copy func
 	if path != "" {
 		in, err := os.Open(path)
 		if err != nil {
@@ -213,173 +371,108 @@ func (self *SelfApp) NewNoteWithContentsOfFile(path string, completion func()) e
 		}
 	}
 
-	self.Notes.Notes = append(self.Notes.Notes, newNote)
-	self.NotesChanged = true
+	book.Notes = append(book.Notes, newNote)
 
-	// If the ui is not loaded, then just return and dont open the note
-	//	if !self.uiLoaded {
-	//		log.Printf("not adding item to ui")
-	//		return nil
-	//	}
+	fmt.Printf("NEW NOTES: %+v\n", book)
 
-	// Append the new note
-	//	self.noteList.AddItem("hello", "[new_note]", getShortcutForIndex(len(self.notes.Notes)-1), func() {
-	//		err := self.openNote(self.noteList.GetCurrentItem() - 1)
-	//		if err != nil {
-	//			log.Fatalf("Failed opening note index: %d: %s\n", self.noteList.GetCurrentItem()-1, err)
-	//		}
-	//	})
+	self.IndexNeedsUpdating = true
 
 	// Open the new note
 	if completion != nil {
 		completion()
 	}
-	//return self.openNote(len(self.Notes.Notes) - 1)
+
 	return nil
 }
 
-func (self *SelfApp) NewNote(completion func()) error {
-	return self.NewNoteWithContentsOfFile("", completion)
+func (book *Book) NewNote(noteDir string, completion func()) error {
+	return book.NewNoteWithContentsOfFile(noteDir, "", completion)
 }
 
-//func (self *SelfApp) openNote(index int) error {
-//	// Quit the app before opening the text editor
-//	//self.app.Stop()
-//
-//	if self.notes.Notes[index].IsAttachment {
-//		action := ""
-//
-//		fmt.Printf(`Do you want to:
-//  d      - Download
-//  e      - Edit name
-//  delete - Delete the attachment
-//  b      - Back
-//: `)
-//		fmt.Scanln(&action)
-//
-//		switch action {
-//		case "d":
-//			downloadTo := self.notes.Notes[index].AttachmentTitle
-//			fmt.Printf("Downloading %s to %s...\n", downloadTo, downloadTo)
-//
-//			err := self.config.S3.s3DownloadFileFrom(self.notes.Notes[index].File, downloadTo)
-//			if err != nil {
-//				return fmt.Errorf("failed to download attachment: %s", err)
-//			}
-//
-//			fmt.Printf("Downloaded attachment (%s) to: %s\n", self.notes.Notes[index].Title(""), downloadTo)
-//		case "e":
-//			return fmt.Errorf("not impmented")
-//		case "delete":
-//			fmt.Printf("Deleting %s...\n", self.notes.Notes[index].Title(""))
-//			err := self.config.S3.Delete(self.notes.Notes[index].File)
-//			if err != nil {
-//				return fmt.Errorf("failed to delete file from s3: %s", err)
-//			}
-//
-//			self.Notes.Notes = append(self.notes.Notes[:index], self.notes.Notes[index+1:]...)
-//			self.NotesChanged = true
-//
-//			sortByModTime(self.notes.Notes)
-//			//self.loadUI()
-//		case "b":
-//			//self.loadUI()
-//		default:
-//			return fmt.Errorf("unknown input: %s", action)
-//		}
-//
-//		return nil
-//	}
-//
-//	// Run the command to open the text file with the specified editor
-//	editFile := filepath.Join(self.config.App.NoteDir, "gnotes", self.notes.Notes[index].File)
-//	cmd := exec.Command(self.config.App.Editor, editFile)
-//	cmd.Stdout = os.Stdout
-//	cmd.Stdin = os.Stdin
-//	cmd.Stderr = os.Stderr
-//
-//	err := cmd.Run()
-//	if err != nil {
-//		return err
-//	}
-//
-//	// Check if the file is empty
-//	r, err := os.Open(editFile)
-//	if err != nil {
-//		return fmt.Errorf("failed to open file: %s", err)
-//	}
-//	defer r.Close()
-//
-//	b, err := os.ReadFile(editFile)
-//	if err != nil {
-//		return fmt.Errorf("failed to read file: %s", err)
-//	}
-//
-//	if string(b) == "" {
-//		// Note is empty, so delete it
-//		err := os.RemoveAll(filepath.Join(self.config.App.NoteDir, "gnotes", self.notes.Notes[index].Dir))
-//		if err != nil {
-//			return fmt.Errorf("failed to delete empty note: %s", err)
-//		}
-//
-//		self.notes.Notes = append(self.notes.Notes[:index], self.notes.Notes[index+1:]...)
-//
-//		self.notesChanged = true
-//
-//		sortByModTime(self.notes.Notes)
-//		//self.loadUI()
-//
-//		return nil
-//	}
-//
-//	newSha, err := Sha1File(editFile)
-//	if err != nil {
-//		return fmt.Errorf("failed to sha file: %s", err)
-//	}
-//
-//	if self.notes.Notes[index].Hash != newSha {
-//		// Note changed
-//		self.notes.Notes[index].Hash = newSha
-//		self.notes.Notes[index].Modified = time.Now().Unix()
-//		self.notesChanged = true
-//	}
-//
-//	// Resort the notes
-//	sortByModTime(self.notes.Notes)
-//
-//	//self.loadUI()
-//
-//	return nil
-//}
+func (n *NoteBook) Sort() {
+	sort.Slice(n.Books, func(i, j int) bool {
+		return sortorder.NaturalLess(n.Books[i].Name, n.Books[j].Name)
+	})
 
-func (n *NoteSpec) Sort() {
+	for _, b := range n.Books {
+		b.Sort()
+	}
+}
+
+func (n *Book) Sort() {
+	// First, put all attachments at the bottom,
+	// then, sort all notes by last modified
+	// finally, sort all attachments by date created,
+
+	numNotes := 0
+
+	for _, a := range n.Notes {
+		if !a.IsAttachment {
+			numNotes++
+		}
+	}
+
+	// Sort the note type
+	sort.Slice(n.Notes, func(i, j int) bool {
+		if boolInt(n.Notes[i].IsAttachment) < boolInt(n.Notes[j].IsAttachment) {
+			return true
+		}
+		return false
+	})
+
+	// Sort the notes
 	sorting := true
-
 	for sorting {
 		sorting = false
-		for i := 0; i < len(n.Notes)-1; i++ {
+		for i := 0; i < numNotes-1; i++ {
 			if n.Notes[i].Modified < n.Notes[i+1].Modified {
-				tmp := n.Notes[i]
-				n.Notes[i] = n.Notes[i+1]
-				n.Notes[i+1] = tmp
+				n.Notes[i], n.Notes[i+1] = n.Notes[i+1], n.Notes[i]
+				sorting = true
+			}
+		}
+	}
+
+	// Sort the attachments
+	sorting = true
+	for sorting {
+		sorting = false
+		for i := numNotes; i < len(n.Notes)-1; i++ {
+			// By name
+			// if !sortorder.NaturalLess(filepath.Base(n.Notes[i].S3Path), filepath.Base(n.Notes[i+1].S3Path)) {
+			if n.Notes[i].Created < n.Notes[i+1].Created {
+				n.Notes[i], n.Notes[i+1] = n.Notes[i+1], n.Notes[i]
 				sorting = true
 			}
 		}
 	}
 }
 
-//func sortByModTime(notes []NoteInfo) {
-//	sorting := true
-//
-//	for sorting {
-//		sorting = false
-//		for i := 0; i < len(notes)-1; i++ {
-//			if notes[i].Modified < notes[i+1].Modified {
-//				tmp := notes[i]
-//				notes[i] = notes[i+1]
-//				notes[i+1] = tmp
-//				sorting = true
-//			}
-//		}
-//	}
-//}
+// boolInt will convert a bool to int. Used for sorting.
+func boolInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+func copyFileContents(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	if _, err = io.Copy(out, in); err != nil {
+		return err
+	}
+
+	if err := out.Sync(); err != nil {
+		return err
+	}
+
+	return out.Close()
+}

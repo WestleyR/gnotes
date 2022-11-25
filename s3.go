@@ -27,12 +27,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
-// Default upload to save the notes.
-func (c S3Config) S3UploadFile(filepath string) error {
-	return c.S3UploadFileTo(filepath, c.File)
-}
+func (c S3Config) UploadFile(local, to string) error {
+	// gzip the file first
+	encFile, err := c.GzipAndEncrypt(local)
+	if err != nil {
+		return fmt.Errorf("failed to compress and encrypt file: %w", err)
+	}
 
-func (c S3Config) S3UploadFileTo(filepath, to string) error {
 	s3Config := &aws.Config{
 		Credentials:      credentials.NewStaticCredentials(c.AccessKey, c.SecretKey, ""),
 		Endpoint:         aws.String(c.Endpoint),
@@ -60,7 +61,7 @@ func (c S3Config) S3UploadFileTo(filepath, to string) error {
 		return err
 	}
 
-	f, err := os.ReadFile(filepath)
+	f, err := os.ReadFile(encFile)
 	if err != nil {
 		return fmt.Errorf("failed to read file to upload: %s", err)
 	}
@@ -74,16 +75,14 @@ func (c S3Config) S3UploadFileTo(filepath, to string) error {
 		return fmt.Errorf("failed to upload data to %s/%s, %s", c.Bucket, to, err)
 	}
 
-	fmt.Printf("Successfully uploaded data to: %s\n", c.Bucket)
+	log.Printf("Uploaded: %s/%s <- %s (%v bytes)", c.Bucket, to, local, len(f))
 
 	return nil
 }
 
-func (c S3Config) S3DownloadFile(endPath string) error {
-	return c.S3DownloadFileFrom(c.File, endPath)
-}
+func (c S3Config) DownloadFileFrom(s3File, endPath string) error {
+	endPath += ".enc"
 
-func (c S3Config) S3DownloadFileFrom(s3File, endPath string) error {
 	bucket := aws.String(c.Bucket)
 
 	s3Config := &aws.Config{
@@ -101,7 +100,7 @@ func (c S3Config) S3DownloadFileFrom(s3File, endPath string) error {
 	// Create the base dir if it does not exist
 	baseDir := filepath.Dir(endPath)
 	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
-		err := os.MkdirAll(baseDir, 0766)
+		err := os.MkdirAll(baseDir, 0755)
 		if err != nil {
 			return err
 		}
@@ -120,12 +119,76 @@ func (c S3Config) S3DownloadFileFrom(s3File, endPath string) error {
 			Key:    aws.String(s3File),
 		})
 	if err != nil {
-		return fmt.Errorf("failed to download file: %s", err)
+		return fmt.Errorf("failed to download file: %s: %w", s3File, err)
 	}
 
-	log.Printf("Downloaded file: %s (%v bytes)\n", file.Name(), numBytes)
+	log.Printf("Downloaded: %s/%s -> %s (%v bytes)", c.Bucket, s3File, file.Name(), numBytes)
+
+	// Decrypt, and ungzip it
+	err = c.DecryptAndDeGzip(endPath)
+	if err != nil {
+		return fmt.Errorf("failed to decrypt and de-gzip data: %w", err)
+	}
 
 	return nil
+}
+
+func (c S3Config) DecryptAndDeGzip(file string) error {
+	downloadedBytes, err := os.ReadFile(file)
+	if err != nil {
+		return err
+	}
+
+	downloadedBytes, err = c.Decrypt(downloadedBytes)
+	if err != nil {
+		return fmt.Errorf("failed to decrypt data: %s", err)
+	}
+
+	// Remove the old file (it has a .enc suffix)
+	err = os.Remove(file)
+	if err != nil {
+		return fmt.Errorf("failed to cleanup old file: %w", err)
+	}
+
+	// Remove any .enc suffix
+	file = strings.TrimSuffix(file, ".enc")
+
+	downloadedBytes, err = gzipExtract(downloadedBytes)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(file, downloadedBytes, 0664)
+	if err != nil {
+		return fmt.Errorf("failed to write output file: %w", err)
+	}
+
+	log.Printf("Decrypted -> decompressed -> %s", file)
+
+	return nil
+}
+
+func (c S3Config) GzipAndEncrypt(file string) (string, error) {
+	compressed, err := gzipCompressFile(file)
+	if err != nil {
+		return "", err
+	}
+
+	enc, err := c.Encrypt(compressed)
+	if err != nil {
+		return "", fmt.Errorf("failed to decrypt data: %s", err)
+	}
+
+	newFile := file + ".enc"
+
+	err = os.WriteFile(newFile, enc, 0664)
+	if err != nil {
+		return "", fmt.Errorf("failed to write to file: %w", err)
+	}
+
+	log.Printf("Compressed -> encrypted -> %s", file)
+
+	return newFile, nil
 }
 
 func (c S3Config) Delete(s3File string) error {
