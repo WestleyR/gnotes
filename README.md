@@ -11,7 +11,7 @@ _[screenshot here...]_
 ## How it works
 
 GNOTES syncs all notes and attachments to a s3 server. v1 branch will store all
-notes (not attachments) in one tarball. Every seprate note is contained into
+notes (not attachments) in one tarball. Every separate note is contained into
 that one file. With v2, each note is a seprate file on s3. This greatly
 improves download and upload speed when saving notes. Also, each note is
 checked with a sha1sum checksum to avoid downloading the notes if its already
@@ -20,7 +20,7 @@ cached locally.
 In v2, all notes and attachments are compressed, and encrypted before uploading
 to the s3 server.
 
-Eventally, v3 will be diff based, further improving download and upload speed,
+Eventually, v3 will be diff based, further improving download and upload speed,
 and able to keep some revisions.
 
 ## Installation
