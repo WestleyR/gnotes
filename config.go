@@ -59,7 +59,7 @@ type S3Config struct {
 	SecretKey string `ini:"secretkey"`
 }
 
-func LoadConfig() *Config {
+func LoadConfig(configFile string) *Config {
 	conf := &Config{
 		Account: accountConfig{
 			User:  "",
@@ -83,8 +83,6 @@ func LoadConfig() *Config {
 			Key:    "",
 		},
 	}
-
-	configFile := GetFileFromConfig("config.ini")
 
 	iniBytes, err := ioutil.ReadFile(configFile)
 	if err != nil {

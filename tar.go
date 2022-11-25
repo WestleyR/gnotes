@@ -66,7 +66,7 @@ func tarCompress(src string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// dst contains the end dir.
+// dst contains the end dir. Note: will not overide files, I think...
 func untar(src []byte, dst string) error {
 	buff := bytes.NewBuffer(nil)
 	buff.Write(src)

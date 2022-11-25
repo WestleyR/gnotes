@@ -68,6 +68,8 @@ typedef struct { void *data; GoInt len; GoInt cap; } GoSlice;
 extern "C" {
 #endif
 
+extern char* InitApp(char* input);
+extern char* NewNote(char* input);
 extern char* Download(char* input);
 extern char* Save(char* input);
 extern char* List(char* input);

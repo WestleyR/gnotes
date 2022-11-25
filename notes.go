@@ -67,7 +67,7 @@ func InitApp(configPath string) (*SelfApp, error) {
 
 	app.NotesChanged = false
 
-	app.Config = LoadConfig()
+	app.Config = LoadConfig(configPath)
 
 	app.Notes = new(NoteSpec)
 

@@ -60,13 +60,26 @@ func (self *SelfApp) LoadNotes() error {
 			log.Printf("WARNING: Notes are not encrypted")
 		}
 
+		noteDirPath := filepath.Join(self.Config.App.NoteDir, "gnotes")
+
 		// Now untar the notes
-		err = untar(downloadedBytes, filepath.Join(self.Config.App.NoteDir, "gnotes"))
-		if err != nil {
-			if self.CliOpts.NewNote {
-				return fmt.Errorf("failed to untar: %s", err)
+		if _, err := os.Lstat(noteDirPath); err != nil {
+			// If this exists, that means the app quited without saving its changes, so
+			// dont untar the downloaded data.
+			err = untar(downloadedBytes, noteDirPath)
+			if err != nil {
+				if self.CliOpts.NewNote {
+					return fmt.Errorf("failed to untar: %s", err)
+				}
 			}
+		} else {
+			log.Printf("gnotes did not terminate correctly: notes directory already exists. Some data may be lost")
 		}
+	}
+
+	if self.CliOpts.NewNote {
+		log.Printf("skipping json reading since new note is specified")
+		return nil
 	}
 
 	// Now read the downloaded file
