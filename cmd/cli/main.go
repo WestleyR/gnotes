@@ -16,9 +16,12 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
+	"time"
 
 	"github.com/WestleyR/gnotes"
+	"github.com/google/uuid"
 	"github.com/spf13/pflag"
 )
 
@@ -31,20 +34,33 @@ func main() {
 	skipDownloadFlag := pflag.BoolP("skip-download", "s", false, "skips downloading the note file, used for devs, or if starting notes from scratch.")
 	newNoteFlag := pflag.BoolP("reset", "R", false, "dont fail if local notes dont exist, DANGER: could delete all existing notes!")
 	decryptFlag := pflag.StringP("decrypt", "d", "", "decrypt for devs")
+	genCryptKeyFlag := pflag.BoolP("gen-crypt-key", "", false, "generate an 16 bit encryption key (for first initalization)")
+	genUUIDFlag := pflag.BoolP("gen-uuid", "", false, "generate a uuid for user id (for first initalization)")
 
 	pflag.Parse()
 
-	if *helpFlag {
-		fmt.Printf("Copyright (c) 2021 WestleyR. All rights reserved.\n")
+	switch {
+	case *helpFlag:
+		fmt.Printf("Copyright (c) 2021-2022 WestleyR. All rights reserved.\n")
 		fmt.Printf("This software is licensed under the terms of The Clear BSD License.\n")
 		fmt.Printf("Source code: https://github.com/WestleyR/gnotes\n")
 		fmt.Printf("\n")
 		pflag.Usage()
 		return
-	}
 
-	if *versionFlag {
-		fmt.Printf("%s\n", Version)
+	case *versionFlag:
+		if *versionFlag {
+			fmt.Printf("%s\n", Version)
+			return
+		}
+
+	case *genCryptKeyFlag:
+		fmt.Println(ranStr(16))
+		return
+
+	case *genUUIDFlag:
+		u := uuid.New()
+		fmt.Println(u.String())
 		return
 	}
 
@@ -107,4 +123,17 @@ func main() {
 	}
 
 	fmt.Println("END")
+}
+
+const validKeyChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+
+func ranStr(n int) string {
+	rand.Seed(time.Now().UnixNano())
+
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = validKeyChars[rand.Intn(len(validKeyChars))]
+	}
+
+	return string(b)
 }

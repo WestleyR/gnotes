@@ -46,22 +46,7 @@ type S3Config struct {
 }
 
 func LoadConfig(configFile string) (*Config, error) {
-	conf := &Config{
-		App: appSettings{
-			Editor:  "vim",
-			NoteDir: "/tmp",
-		},
-		S3: S3Config{
-			Active:    false,
-			Bucket:    "",
-			Endpoint:  "",
-			Region:    "",
-			AccessKey: "",
-			SecretKey: "",
-			UserID:    "uuid_TODO",
-			CryptKey:  "",
-		},
-	}
+	conf := &Config{}
 
 	iniBytes, err := ioutil.ReadFile(configFile)
 	if err != nil {

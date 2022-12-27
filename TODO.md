@@ -31,6 +31,8 @@
  - [x] Use env parsing to get the variable in the config file, like HOME
  - [ ] Use datasize.ByteSize type for file bytes (maybe)
  - [ ] Test changing a note, closing the app without uploading the index.json file and see how it recovers (should use local file maybe?) or just update the index.json right away
+ - [x] Add flags to generate user id and 16 crypt key
+ - [ ] Fix cmd/cli directory names to be go install-able
 
 ## v3 (not even started)
  - [ ] Be diff based for even faster performance (maybe, probaly not needed at all, v2 is fine)

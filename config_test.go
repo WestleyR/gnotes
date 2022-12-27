@@ -19,7 +19,7 @@ func TestLoadConfig(t *testing.T) {
 	expected := &Config{
 		App: appSettings{
 			Editor:  "vim",
-			NoteDir: "/home/westley/my-dir/.config/gnotes",
+			NoteDir: os.Getenv("HOME") + "/my-dir/.config/gnotes",
 		},
 		S3: S3Config{
 			Active:    true,
@@ -29,7 +29,7 @@ func TestLoadConfig(t *testing.T) {
 			AccessKey: "ACCESS_KEY",
 			SecretKey: "SECRET_KEY",
 			UserID:    "a8085892-7bf4-11ed-bbd6-a74217c9099d",
-			CryptKey:  "ie02kwj1mkslao2jdifie",
+			CryptKey:  "DpiJ1QaSh25O1Kt3",
 		},
 	}
 

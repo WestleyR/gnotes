@@ -26,6 +26,10 @@ all: $(TARGET_CLI)
 $(TARGET_CLI): $(SRC)
 	$(GO) build $(GOFLAGS) -o $(TARGET_CLI) ./cmd/cli
 
+.PHONY: test
+test:
+	$(GO) test -v .
+
 generate: $(SRC)
 	go build -buildmode c-shared -o bridge-c/gnotes-bridge.so bridge-go/*.go
 
