@@ -28,8 +28,10 @@
  - [x] Fix sorting issues
  - [ ] Fix c bindings
  - [ ] Create an ios app to use this
- - [ ] Use env parsing to get the variable in the config file, like HOME
+ - [x] Use env parsing to get the variable in the config file, like HOME
+ - [ ] Use datasize.ByteSize type for file bytes (maybe)
+ - [ ] Test changing a note, closing the app without uploading the index.json file and see how it recovers (should use local file maybe?) or just update the index.json right away
 
 ## v3 (not even started)
- - [ ] Be diff based for even faster performance
+ - [ ] Be diff based for even faster performance (maybe, probaly not needed at all, v2 is fine)
 

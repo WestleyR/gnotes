@@ -16,10 +16,8 @@ package gnotes
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/wildwest-productions/goini"
 )
@@ -41,14 +39,13 @@ type S3Config struct {
 	Bucket    string `ini:"bucket"`
 	Endpoint  string `ini:"endpoint"`
 	Region    string `ini:"region"`
-	File      string `ini:"file"`
 	AccessKey string `ini:"accesskey"`
 	SecretKey string `ini:"secretkey"`
 	UserID    string `ini:"user_id"`
 	CryptKey  string `ini:"crypt_key"`
 }
 
-func LoadConfig(configFile string) *Config {
+func LoadConfig(configFile string) (*Config, error) {
 	conf := &Config{
 		App: appSettings{
 			Editor:  "vim",
@@ -59,7 +56,6 @@ func LoadConfig(configFile string) *Config {
 			Bucket:    "",
 			Endpoint:  "",
 			Region:    "",
-			File:      "change-me",
 			AccessKey: "",
 			SecretKey: "",
 			UserID:    "uuid_TODO",
@@ -69,24 +65,17 @@ func LoadConfig(configFile string) *Config {
 
 	iniBytes, err := ioutil.ReadFile(configFile)
 	if err != nil {
-		log.Printf("Error opening: %s", configFile)
-		return conf
+		return nil, fmt.Errorf("failed reading file: %w", err)
 	}
 
 	err = goini.Unmarshal(iniBytes, &conf)
 	if err != nil {
-		log.Printf("Error unmarshaling file: %s", err)
+		return nil, fmt.Errorf("failed to unmarshal ini: %w", err)
 	}
 
-	// Replace the ${HOME} string in the NoteDir if needed
-	home, err := os.UserHomeDir()
-	if err != nil {
-		log.Printf("Error getting home dir: %s", err)
-		return conf
-	}
-	conf.App.NoteDir = strings.ReplaceAll(conf.App.NoteDir, "${HOME}", home)
+	conf.App.NoteDir = os.ExpandEnv(conf.App.NoteDir)
 
-	return conf
+	return conf, nil
 }
 
 func GetFileFromConfig(file string) string {

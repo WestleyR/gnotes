@@ -83,7 +83,11 @@ type Note struct {
 func InitApp(configPath string) (*SelfApp, error) {
 	app := &SelfApp{}
 
-	app.Config = LoadConfig(configPath)
+	var err error
+	app.Config, err = LoadConfig(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed loading config: %w", err)
+	}
 
 	app.Notes = &NoteBook{
 		Books: []*Book{
@@ -179,7 +183,6 @@ func (n *Note) Save() error {
 
 // DeleteNote will delete a specific note. Will delete the note from s3 imetitly,
 // and reupload the index files.
-// TODO: dont keep passing s3 configs like this, need a better way, maybe a global config.
 func (self *SelfApp) DeleteNote(bookIndex, noteIndex int) error {
 	notePath := filepath.Dir(filepath.Join(self.Config.App.NoteDir, "notes", self.Notes.Books[bookIndex].Notes[noteIndex].S3Path))
 
@@ -204,7 +207,7 @@ func (self *SelfApp) DeleteNote(bookIndex, noteIndex int) error {
 }
 
 // GetTitle returns a title for a note. Requires the local cache path.
-// Should be ~/.cache/wst.gnotes/notes
+// Should be ~/.cache/gnotes/notes
 func (n *Note) GetTitle(noteDir string) string {
 	if n.IsAttachment {
 		return "Attachment: " + n.AttachmentTitle
