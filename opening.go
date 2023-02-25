@@ -29,7 +29,7 @@ func (self *SelfApp) downloadIndexIfNeeded() error {
 		noteSha,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to download file: %w", err)
+		return fmt.Errorf("failed to download file to: %s: %w", noteSha, err)
 	}
 
 	oldSha, err := Sha1File(filepath.Join(self.Config.App.NoteDir, "notes", "index.json"))

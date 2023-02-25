@@ -1,0 +1,668 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		3D7C0E2429A853CF002DCCC3 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 3D7C0E2329A853CF002DCCC3 /* AppDelegate.m */; };
+		3D7C0E2729A853CF002DCCC3 /* SceneDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 3D7C0E2629A853CF002DCCC3 /* SceneDelegate.m */; };
+		3D7C0E2A29A853CF002DCCC3 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 3D7C0E2929A853CF002DCCC3 /* ViewController.m */; };
+		3D7C0E2D29A853CF002DCCC3 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3D7C0E2B29A853CF002DCCC3 /* Main.storyboard */; };
+		3D7C0E2F29A853D1002DCCC3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3D7C0E2E29A853D1002DCCC3 /* Assets.xcassets */; };
+		3D7C0E3229A853D1002DCCC3 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3D7C0E3029A853D1002DCCC3 /* LaunchScreen.storyboard */; };
+		3D7C0E3529A853D1002DCCC3 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 3D7C0E3429A853D1002DCCC3 /* main.m */; };
+		3D7C0E3F29A853D2002DCCC3 /* gnotes_iosTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 3D7C0E3E29A853D2002DCCC3 /* gnotes_iosTests.m */; };
+		3D7C0E4929A853D2002DCCC3 /* gnotes_iosUITests.m in Sources */ = {isa = PBXBuildFile; fileRef = 3D7C0E4829A853D2002DCCC3 /* gnotes_iosUITests.m */; };
+		3D7C0E4B29A853D2002DCCC3 /* gnotes_iosUITestsLaunchTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 3D7C0E4A29A853D2002DCCC3 /* gnotes_iosUITestsLaunchTests.m */; };
+		3D7C0E6029A85565002DCCC3 /* gnotes.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D7C0E5A29A85565002DCCC3 /* gnotes.a */; };
+		3D7C0E6129A85565002DCCC3 /* arm64.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D7C0E5D29A85565002DCCC3 /* arm64.a */; };
+		3D7C0E6229A85565002DCCC3 /* x86_64.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D7C0E5F29A85565002DCCC3 /* x86_64.a */; };
+		3DAA0AC129A9B0A0008D5407 /* config.ini.tpl in Resources */ = {isa = PBXBuildFile; fileRef = 3DAA0AC029A9B0A0008D5407 /* config.ini.tpl */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		3D7C0E3B29A853D2002DCCC3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3D7C0E1729A853CF002DCCC3 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3D7C0E1E29A853CF002DCCC3;
+			remoteInfo = "gnotes-ios";
+		};
+		3D7C0E4529A853D2002DCCC3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3D7C0E1729A853CF002DCCC3 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3D7C0E1E29A853CF002DCCC3;
+			remoteInfo = "gnotes-ios";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		3D7C0E1F29A853CF002DCCC3 /* gnotes-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "gnotes-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		3D7C0E2229A853CF002DCCC3 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		3D7C0E2329A853CF002DCCC3 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		3D7C0E2529A853CF002DCCC3 /* SceneDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SceneDelegate.h; sourceTree = "<group>"; };
+		3D7C0E2629A853CF002DCCC3 /* SceneDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SceneDelegate.m; sourceTree = "<group>"; };
+		3D7C0E2829A853CF002DCCC3 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
+		3D7C0E2929A853CF002DCCC3 /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
+		3D7C0E2C29A853CF002DCCC3 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		3D7C0E2E29A853D1002DCCC3 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		3D7C0E3129A853D1002DCCC3 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		3D7C0E3329A853D1002DCCC3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		3D7C0E3429A853D1002DCCC3 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		3D7C0E3A29A853D2002DCCC3 /* gnotes-iosTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "gnotes-iosTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		3D7C0E3E29A853D2002DCCC3 /* gnotes_iosTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = gnotes_iosTests.m; sourceTree = "<group>"; };
+		3D7C0E4429A853D2002DCCC3 /* gnotes-iosUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "gnotes-iosUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		3D7C0E4829A853D2002DCCC3 /* gnotes_iosUITests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = gnotes_iosUITests.m; sourceTree = "<group>"; };
+		3D7C0E4A29A853D2002DCCC3 /* gnotes_iosUITestsLaunchTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = gnotes_iosUITestsLaunchTests.m; sourceTree = "<group>"; };
+		3D7C0E5729A85433002DCCC3 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; name = Makefile; path = ../Makefile; sourceTree = "<group>"; };
+		3D7C0E5A29A85565002DCCC3 /* gnotes.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = gnotes.a; sourceTree = "<group>"; };
+		3D7C0E5B29A85565002DCCC3 /* gnotes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = gnotes.h; sourceTree = "<group>"; };
+		3D7C0E5C29A85565002DCCC3 /* arm64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = arm64.h; sourceTree = "<group>"; };
+		3D7C0E5D29A85565002DCCC3 /* arm64.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = arm64.a; sourceTree = "<group>"; };
+		3D7C0E5E29A85565002DCCC3 /* x86_64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = x86_64.h; sourceTree = "<group>"; };
+		3D7C0E5F29A85565002DCCC3 /* x86_64.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = x86_64.a; sourceTree = "<group>"; };
+		3DAA0AC029A9B0A0008D5407 /* config.ini.tpl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = config.ini.tpl; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		3D7C0E1C29A853CF002DCCC3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3D7C0E6229A85565002DCCC3 /* x86_64.a in Frameworks */,
+				3D7C0E6129A85565002DCCC3 /* arm64.a in Frameworks */,
+				3D7C0E6029A85565002DCCC3 /* gnotes.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3D7C0E3729A853D2002DCCC3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3D7C0E4129A853D2002DCCC3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		3D7C0E1629A853CF002DCCC3 = {
+			isa = PBXGroup;
+			children = (
+				3D7C0E5729A85433002DCCC3 /* Makefile */,
+				3D7C0E2129A853CF002DCCC3 /* gnotes-ios */,
+				3D7C0E3D29A853D2002DCCC3 /* gnotes-iosTests */,
+				3D7C0E4729A853D2002DCCC3 /* gnotes-iosUITests */,
+				3D7C0E2029A853CF002DCCC3 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		3D7C0E2029A853CF002DCCC3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				3D7C0E1F29A853CF002DCCC3 /* gnotes-ios.app */,
+				3D7C0E3A29A853D2002DCCC3 /* gnotes-iosTests.xctest */,
+				3D7C0E4429A853D2002DCCC3 /* gnotes-iosUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		3D7C0E2129A853CF002DCCC3 /* gnotes-ios */ = {
+			isa = PBXGroup;
+			children = (
+				3D7C0E5929A85565002DCCC3 /* ios-lib */,
+				3D7C0E2229A853CF002DCCC3 /* AppDelegate.h */,
+				3D7C0E2329A853CF002DCCC3 /* AppDelegate.m */,
+				3D7C0E2529A853CF002DCCC3 /* SceneDelegate.h */,
+				3D7C0E2629A853CF002DCCC3 /* SceneDelegate.m */,
+				3D7C0E2829A853CF002DCCC3 /* ViewController.h */,
+				3D7C0E2929A853CF002DCCC3 /* ViewController.m */,
+				3D7C0E2B29A853CF002DCCC3 /* Main.storyboard */,
+				3D7C0E2E29A853D1002DCCC3 /* Assets.xcassets */,
+				3D7C0E3029A853D1002DCCC3 /* LaunchScreen.storyboard */,
+				3D7C0E3329A853D1002DCCC3 /* Info.plist */,
+				3D7C0E3429A853D1002DCCC3 /* main.m */,
+				3DAA0ABF29A9B049008D5407 /* Files */,
+			);
+			path = "gnotes-ios";
+			sourceTree = "<group>";
+		};
+		3D7C0E3D29A853D2002DCCC3 /* gnotes-iosTests */ = {
+			isa = PBXGroup;
+			children = (
+				3D7C0E3E29A853D2002DCCC3 /* gnotes_iosTests.m */,
+			);
+			path = "gnotes-iosTests";
+			sourceTree = "<group>";
+		};
+		3D7C0E4729A853D2002DCCC3 /* gnotes-iosUITests */ = {
+			isa = PBXGroup;
+			children = (
+				3D7C0E4829A853D2002DCCC3 /* gnotes_iosUITests.m */,
+				3D7C0E4A29A853D2002DCCC3 /* gnotes_iosUITestsLaunchTests.m */,
+			);
+			path = "gnotes-iosUITests";
+			sourceTree = "<group>";
+		};
+		3D7C0E5929A85565002DCCC3 /* ios-lib */ = {
+			isa = PBXGroup;
+			children = (
+				3D7C0E5A29A85565002DCCC3 /* gnotes.a */,
+				3D7C0E5B29A85565002DCCC3 /* gnotes.h */,
+				3D7C0E5C29A85565002DCCC3 /* arm64.h */,
+				3D7C0E5D29A85565002DCCC3 /* arm64.a */,
+				3D7C0E5E29A85565002DCCC3 /* x86_64.h */,
+				3D7C0E5F29A85565002DCCC3 /* x86_64.a */,
+			);
+			path = "ios-lib";
+			sourceTree = "<group>";
+		};
+		3DAA0ABF29A9B049008D5407 /* Files */ = {
+			isa = PBXGroup;
+			children = (
+				3DAA0AC029A9B0A0008D5407 /* config.ini.tpl */,
+			);
+			path = Files;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		3D7C0E1E29A853CF002DCCC3 /* gnotes-ios */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3D7C0E4E29A853D2002DCCC3 /* Build configuration list for PBXNativeTarget "gnotes-ios" */;
+			buildPhases = (
+				3D7C0E6329A85765002DCCC3 /* ShellScript */,
+				3D7C0E1B29A853CF002DCCC3 /* Sources */,
+				3D7C0E1C29A853CF002DCCC3 /* Frameworks */,
+				3D7C0E1D29A853CF002DCCC3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "gnotes-ios";
+			productName = "gnotes-ios";
+			productReference = 3D7C0E1F29A853CF002DCCC3 /* gnotes-ios.app */;
+			productType = "com.apple.product-type.application";
+		};
+		3D7C0E3929A853D2002DCCC3 /* gnotes-iosTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3D7C0E5129A853D2002DCCC3 /* Build configuration list for PBXNativeTarget "gnotes-iosTests" */;
+			buildPhases = (
+				3D7C0E3629A853D2002DCCC3 /* Sources */,
+				3D7C0E3729A853D2002DCCC3 /* Frameworks */,
+				3D7C0E3829A853D2002DCCC3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				3D7C0E3C29A853D2002DCCC3 /* PBXTargetDependency */,
+			);
+			name = "gnotes-iosTests";
+			productName = "gnotes-iosTests";
+			productReference = 3D7C0E3A29A853D2002DCCC3 /* gnotes-iosTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		3D7C0E4329A853D2002DCCC3 /* gnotes-iosUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3D7C0E5429A853D2002DCCC3 /* Build configuration list for PBXNativeTarget "gnotes-iosUITests" */;
+			buildPhases = (
+				3D7C0E4029A853D2002DCCC3 /* Sources */,
+				3D7C0E4129A853D2002DCCC3 /* Frameworks */,
+				3D7C0E4229A853D2002DCCC3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				3D7C0E4629A853D2002DCCC3 /* PBXTargetDependency */,
+			);
+			name = "gnotes-iosUITests";
+			productName = "gnotes-iosUITests";
+			productReference = 3D7C0E4429A853D2002DCCC3 /* gnotes-iosUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		3D7C0E1729A853CF002DCCC3 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1410;
+				TargetAttributes = {
+					3D7C0E1E29A853CF002DCCC3 = {
+						CreatedOnToolsVersion = 14.1;
+					};
+					3D7C0E3929A853D2002DCCC3 = {
+						CreatedOnToolsVersion = 14.1;
+						TestTargetID = 3D7C0E1E29A853CF002DCCC3;
+					};
+					3D7C0E4329A853D2002DCCC3 = {
+						CreatedOnToolsVersion = 14.1;
+						TestTargetID = 3D7C0E1E29A853CF002DCCC3;
+					};
+				};
+			};
+			buildConfigurationList = 3D7C0E1A29A853CF002DCCC3 /* Build configuration list for PBXProject "gnotes-ios" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 3D7C0E1629A853CF002DCCC3;
+			productRefGroup = 3D7C0E2029A853CF002DCCC3 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				3D7C0E1E29A853CF002DCCC3 /* gnotes-ios */,
+				3D7C0E3929A853D2002DCCC3 /* gnotes-iosTests */,
+				3D7C0E4329A853D2002DCCC3 /* gnotes-iosUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		3D7C0E1D29A853CF002DCCC3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3D7C0E3229A853D1002DCCC3 /* LaunchScreen.storyboard in Resources */,
+				3DAA0AC129A9B0A0008D5407 /* config.ini.tpl in Resources */,
+				3D7C0E2F29A853D1002DCCC3 /* Assets.xcassets in Resources */,
+				3D7C0E2D29A853CF002DCCC3 /* Main.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3D7C0E3829A853D2002DCCC3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3D7C0E4229A853D2002DCCC3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		3D7C0E6329A85765002DCCC3 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 12;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\n\ncd ../\n\n#make ios\n\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		3D7C0E1B29A853CF002DCCC3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3D7C0E2A29A853CF002DCCC3 /* ViewController.m in Sources */,
+				3D7C0E2429A853CF002DCCC3 /* AppDelegate.m in Sources */,
+				3D7C0E3529A853D1002DCCC3 /* main.m in Sources */,
+				3D7C0E2729A853CF002DCCC3 /* SceneDelegate.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3D7C0E3629A853D2002DCCC3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3D7C0E3F29A853D2002DCCC3 /* gnotes_iosTests.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3D7C0E4029A853D2002DCCC3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3D7C0E4B29A853D2002DCCC3 /* gnotes_iosUITestsLaunchTests.m in Sources */,
+				3D7C0E4929A853D2002DCCC3 /* gnotes_iosUITests.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		3D7C0E3C29A853D2002DCCC3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3D7C0E1E29A853CF002DCCC3 /* gnotes-ios */;
+			targetProxy = 3D7C0E3B29A853D2002DCCC3 /* PBXContainerItemProxy */;
+		};
+		3D7C0E4629A853D2002DCCC3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3D7C0E1E29A853CF002DCCC3 /* gnotes-ios */;
+			targetProxy = 3D7C0E4529A853D2002DCCC3 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		3D7C0E2B29A853CF002DCCC3 /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				3D7C0E2C29A853CF002DCCC3 /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+		3D7C0E3029A853D1002DCCC3 /* LaunchScreen.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				3D7C0E3129A853D1002DCCC3 /* Base */,
+			);
+			name = LaunchScreen.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		3D7C0E4C29A853D2002DCCC3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		3D7C0E4D29A853D2002DCCC3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		3D7C0E4F29A853D2002DCCC3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 63H9H8GH3G;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "gnotes-ios/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = GNOTES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.west.gnotes-ios";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		3D7C0E5029A853D2002DCCC3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 63H9H8GH3G;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "gnotes-ios/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = GNOTES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.west.gnotes-ios";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		3D7C0E5229A853D2002DCCC3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 63H9H8GH3G;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.west.gnotes-iosTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/gnotes-ios.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/gnotes-ios";
+			};
+			name = Debug;
+		};
+		3D7C0E5329A853D2002DCCC3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 63H9H8GH3G;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.west.gnotes-iosTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/gnotes-ios.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/gnotes-ios";
+			};
+			name = Release;
+		};
+		3D7C0E5529A853D2002DCCC3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 63H9H8GH3G;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.west.gnotes-iosUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "gnotes-ios";
+			};
+			name = Debug;
+		};
+		3D7C0E5629A853D2002DCCC3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 63H9H8GH3G;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.west.gnotes-iosUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "gnotes-ios";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		3D7C0E1A29A853CF002DCCC3 /* Build configuration list for PBXProject "gnotes-ios" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3D7C0E4C29A853D2002DCCC3 /* Debug */,
+				3D7C0E4D29A853D2002DCCC3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3D7C0E4E29A853D2002DCCC3 /* Build configuration list for PBXNativeTarget "gnotes-ios" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3D7C0E4F29A853D2002DCCC3 /* Debug */,
+				3D7C0E5029A853D2002DCCC3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3D7C0E5129A853D2002DCCC3 /* Build configuration list for PBXNativeTarget "gnotes-iosTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3D7C0E5229A853D2002DCCC3 /* Debug */,
+				3D7C0E5329A853D2002DCCC3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3D7C0E5429A853D2002DCCC3 /* Build configuration list for PBXNativeTarget "gnotes-iosUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3D7C0E5529A853D2002DCCC3 /* Debug */,
+				3D7C0E5629A853D2002DCCC3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 3D7C0E1729A853CF002DCCC3 /* Project object */;
+}

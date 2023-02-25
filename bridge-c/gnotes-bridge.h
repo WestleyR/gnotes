@@ -5,7 +5,7 @@
 
 #line 1 "cgo-builtin-export-prolog"
 
-#include <stddef.h> /* for ptrdiff_t below */
+#include <stddef.h>
 
 #ifndef GO_CGO_EXPORT_PROLOGUE_H
 #define GO_CGO_EXPORT_PROLOGUE_H
@@ -40,11 +40,17 @@ typedef long long GoInt64;
 typedef unsigned long long GoUint64;
 typedef GoInt64 GoInt;
 typedef GoUint64 GoUint;
-typedef __SIZE_TYPE__ GoUintptr;
+typedef size_t GoUintptr;
 typedef float GoFloat32;
 typedef double GoFloat64;
+#ifdef _MSC_VER
+#include <complex.h>
+typedef _Fcomplex GoComplex64;
+typedef _Dcomplex GoComplex128;
+#else
 typedef float _Complex GoComplex64;
 typedef double _Complex GoComplex128;
+#endif
 
 /*
   static assertion to make sure the file is being used on architecture
@@ -68,11 +74,17 @@ typedef struct { void *data; GoInt len; GoInt cap; } GoSlice;
 extern "C" {
 #endif
 
-extern char* InitApp(char* input);
-extern char* NewNote(char* input);
-extern char* Download(char* input);
-extern char* Save(char* input);
-extern char* List(char* input);
+
+// Download will download the note index file to the specified location in the
+// config. The config should have all the needed s3 access tokens and user id.
+extern void Download(char* config_file);
+
+// DownloadNote will download a specific note from the json index file.
+extern void DownloadNote(char* config_file, char* json_note_path);
+
+// Save will save the whole all and any note if needed, also downloads/uploads
+// the new index.
+extern void Save(char* config_file);
 
 #ifdef __cplusplus
 }

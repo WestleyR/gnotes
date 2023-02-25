@@ -13,74 +13,88 @@ package main
 import "C"
 
 import (
-	"encoding/json"
+	"fmt"
 	"log"
+	"path/filepath"
 
 	"github.com/WestleyR/gnotes"
 )
 
-var app *gnotes.SelfApp
+//export GnotesTest
+func GnotesTest() *C.char {
+	fmt.Println("Hello world from golang!")
 
-//export InitApp
-func InitApp(input *C.char) *C.char {
-	// Input example: `config=/path/to/config skip_download=true new_note=true`
-	opts := parseInput(C.GoString(input))
-
-	var err error
-
-	// Init the self app
-	app, err = gnotes.InitApp(opts["config"])
-	if err != nil {
-		log.Fatalf("Failed to init app: %s", err)
-	}
-
-	// Set the cli opts
-	app.CliOpts.SkipDownload = isBool(opts["skip_download"])
-	app.CliOpts.NewNote = isBool(opts["new_note"])
-
-	return nil
-}
-
-//export NewNote
-func NewNote(input *C.char) *C.char {
-	err := app.NewNote(nil)
-	if err != nil {
-		log.Fatalf("failed to create new note: %s", err)
-	}
-
-	return C.CString("new note created")
+	return C.CString("Hello world from golang!")
 }
 
 //export Download
-func Download(input *C.char) *C.char {
-	err := app.LoadNotes()
+// Download will download the note index file to the specified location in the
+// config. The config should have all the needed s3 access tokens and user id.
+func Download(config_file *C.char) {
+	fmt.Println("Download called")
+
+	configFile := C.GoString(config_file)
+
+	app, err := gnotes.InitApp(configFile)
 	if err != nil {
-		log.Fatalf("Failed to load notes: %s", err)
+		log.Fatalf("Failed to init app: %s\n", err)
 	}
 
-	return C.CString("notes downloaded")
+	err = app.LoadNotes()
+	if err != nil {
+		log.Fatalf("Failed to load notes: %s\n", err)
+	}
+
+	fmt.Println("Download finished")
+}
+
+//export DownloadNote
+// DownloadNote will download a specific note from the json index file.
+func DownloadNote(config_file *C.char, json_note_path *C.char) {
+	fmt.Println("DownloadNote called")
+
+	configFile := C.GoString(config_file)
+
+	app, err := gnotes.InitApp(configFile)
+	if err != nil {
+		log.Fatalf("Failed to init app: %s\n", err)
+	}
+
+	notePath := filepath.Join(app.Config.App.NoteDir, "notes", C.GoString(json_note_path))
+
+	err = app.Config.S3.DownloadFileFrom(filepath.Join(app.Config.S3.UserID, "notes", C.GoString(json_note_path)), notePath)
+	if err != nil {
+		log.Fatalf("Failed to download file: %s", err)
+	}
 }
 
 //export Save
-func Save(input *C.char) *C.char {
-	opts := parseInput(C.GoString(input))
+// Save will save the whole all and any note if needed, also downloads/uploads
+// the new index.
+func Save(config_file *C.char) {
+	fmt.Println("Save called")
 
-	app.NotesChanged = isBool(opts["notes_changed"])
+	configFile := C.GoString(config_file)
 
-	err := app.SaveNotes()
+	app, err := gnotes.InitApp(configFile)
+	if err != nil {
+		log.Fatalf("Failed to init app: %s\n", err)
+	}
+
+	err = app.LoadNotes()
+	if err != nil {
+		log.Fatalf("Failed to load notes: %s\n", err)
+	}
+
+	for _, note := range app.Notes.Books[0].Notes {
+		err := note.Save()
+		if err != nil {
+			log.Fatalf("Failed to save note: %s", err)
+		}
+	}
+
+	err = app.SaveIndexFile()
 	if err != nil {
 		log.Fatalf("Failed to upload notes: %s", err)
 	}
-
-	return C.CString("notes saved")
-}
-
-//export List
-func List(input *C.char) *C.char {
-	jsonData, err := json.Marshal(app.Notes)
-	if err != nil {
-		log.Fatalf("failed to marshal json: %s", err)
-	}
-
-	return C.CString(string(jsonData))
 }

@@ -1,4 +1,10 @@
 /gnotes
 a.out
 
+.DS_Store
+a.out.dSYM
+/gnotes-ios/gnotes-ios/ios-lib/*
+/gnotes-ios/gnotes-ios/ios-lib/*.a
+gnotes-ios/gnotes-ios.xcodeproj/xcuserdata
+
 /bridge-c/*.so

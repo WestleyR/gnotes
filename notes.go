@@ -154,7 +154,7 @@ func (n *Note) Save() error {
 	noteFile := filepath.Join(self.Config.App.NoteDir, "notes", n.S3Path)
 
 	currentHash, err := Sha1File(noteFile)
-	if err != nil {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("failed to get checksum for local cached file: %w", err)
 	}
 
@@ -181,13 +181,13 @@ func (n *Note) Save() error {
 	return nil
 }
 
-// DeleteNote will delete a specific note. Will delete the note from s3 imetitly,
-// and reupload the index files.
+// DeleteNote will delete a specific note. Will delete the note from s3 imetitly.
 func (self *SelfApp) DeleteNote(bookIndex, noteIndex int) error {
 	notePath := filepath.Dir(filepath.Join(self.Config.App.NoteDir, "notes", self.Notes.Books[bookIndex].Notes[noteIndex].S3Path))
 
 	log.Printf("Removing/deleting note: %s", notePath)
 
+	// Delete the local note
 	err := os.RemoveAll(notePath)
 	if err != nil {
 		return fmt.Errorf("failed to delete note: %w", err)

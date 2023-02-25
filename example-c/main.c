@@ -1,41 +1,26 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
+
 #include "../bridge-c/gnotes-bridge.h"
 
-char* catstr(char* str1, char* str2);
+char config_file[] = "/home/westley/.config/gnotes/config.ini";
 
 int main() {
-	char* configStr = "config=config.ini new_note=no";
 
-	InitApp(configStr);
+  // Download the note index
+  Download(config_file);
 
-	char* foo = Download("");
-	printf("Download response: %s\n", foo);
-	free(foo);
+  char test_note[] = "Notes/3f454501-2460-43df-8bee-2f446a1b6b1a/content";
 
-	foo = NewNote("");
-	printf("NewNote response: %s\n", foo);
-	free(foo);
+  DownloadNote(config_file, test_note);
 
-	// Can only list once the notes are saved
-	foo = List("");
-	printf("List response: %s\n", foo);
-	free(foo);
+  printf("C: waiting 10 seconds in case you want to change %s to test upload\n", test_note);
+  sleep(10);
 
-	foo = Save("notes_changed=yes");
-	printf("Save response: %s\n", foo);
-	free(foo);
+  // Save will save all local notes that were changed, and save the index file.
+  Save(config_file);
 
-	return 0;
+  return 0;
 }
-
-char* catstr(char* str1, char* str2) {
-	char* ret = malloc(strlen(str1) + strlen(str2) + 2);
-
-	strcpy(ret, str1);
-	strcat(ret, str2);
-
-	return ret;
-}
-
