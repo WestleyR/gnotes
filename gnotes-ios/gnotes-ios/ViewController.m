@@ -32,7 +32,7 @@
 
 
     NSString* configFile = [self templateConfigWithTMPDir:tmpDirectory];
-    Download((char*)configFile.UTF8String);
+    //Download((char*)configFile.UTF8String);
 
     NSString* jsonIndex = [tmpDirectory stringByAppendingPathComponent:@"notes/index.json"];
     NSString* json = [NSString stringWithContentsOfFile:jsonIndex encoding:NSUTF8StringEncoding error:nil];
@@ -59,6 +59,67 @@
         }
         break; // Only want first index (default Notes)
     }
+
+
+    //SetupView* setupView = [self.storyboard instantiateViewControllerWithIdentifier:@"setupView"];
+    //[self presentModalViewController:setupView animated:YES];
+
+
+
+    [self performSegueWithIdentifier:@"SwitchToSetupView" sender:self];
+
+    return;
+
+
+
+    //AppDelegate *appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];
+    SetupView *aTwoViewController = [self.storyboard instantiateViewControllerWithIdentifier:@"setupView"];
+
+    if (aTwoViewController == nil){
+        /* You could use this instead if not using xib:
+         yourViewController = [[YourViewController alloc]
+         initWithNibName:@"YourViewController"
+         bundle:nil];
+         */
+
+        UIStoryboard *mainStoryboard = [UIStoryboard storyboardWithName:@"MainStoryboard"
+                                                                 bundle: nil];
+        aTwoViewController = [mainStoryboard instantiateViewControllerWithIdentifier: @"setupView"];
+
+    }
+
+    // get the view that's currently showing
+    UIView *currentView = self.view;
+    // get the the underlying UIWindow, or the view containing the current view
+    UIView *theWindow = [currentView superview];
+
+    UIView *newView = aTwoViewController.view;
+
+    // remove the current view and replace with myView1
+    [currentView removeFromSuperview];
+    [theWindow addSubview:newView];
+
+    // set up an animation for the transition between the views
+    CATransition *animation = [CATransition animation];
+    [animation setDuration:0.5];
+    [animation setType:kCATransitionPush];
+    [animation setSubtype:kCATransitionFromRight];
+    [animation setTimingFunction:[CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut]];
+
+    [[theWindow layer] addAnimation:animation forKey:@"SwitchToView2"];
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     /*
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{

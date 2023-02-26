@@ -7,6 +7,8 @@
 
 #import <UIKit/UIKit.h>
 
+#import "SetupView.h"
+
 @interface ViewController : UIViewController {
     NSMutableArray *noteTitles;
 }

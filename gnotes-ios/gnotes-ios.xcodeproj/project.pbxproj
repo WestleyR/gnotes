@@ -21,6 +21,8 @@
 		3D7C0E6129A85565002DCCC3 /* arm64.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D7C0E5D29A85565002DCCC3 /* arm64.a */; };
 		3D7C0E6229A85565002DCCC3 /* x86_64.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D7C0E5F29A85565002DCCC3 /* x86_64.a */; };
 		3DAA0AC129A9B0A0008D5407 /* config.ini.tpl in Resources */ = {isa = PBXBuildFile; fileRef = 3DAA0AC029A9B0A0008D5407 /* config.ini.tpl */; };
+		3DAA0AC529AAFCD6008D5407 /* SetupView.m in Sources */ = {isa = PBXBuildFile; fileRef = 3DAA0AC429AAFCD6008D5407 /* SetupView.m */; };
+		3DAA0AC829AB0C88008D5407 /* FieldInput.m in Sources */ = {isa = PBXBuildFile; fileRef = 3DAA0AC729AB0C88008D5407 /* FieldInput.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -66,6 +68,10 @@
 		3D7C0E5E29A85565002DCCC3 /* x86_64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = x86_64.h; sourceTree = "<group>"; };
 		3D7C0E5F29A85565002DCCC3 /* x86_64.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = x86_64.a; sourceTree = "<group>"; };
 		3DAA0AC029A9B0A0008D5407 /* config.ini.tpl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = config.ini.tpl; sourceTree = "<group>"; };
+		3DAA0AC329AAFCD6008D5407 /* SetupView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SetupView.h; sourceTree = "<group>"; };
+		3DAA0AC429AAFCD6008D5407 /* SetupView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SetupView.m; sourceTree = "<group>"; };
+		3DAA0AC629AB0C88008D5407 /* FieldInput.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FieldInput.h; sourceTree = "<group>"; };
+		3DAA0AC729AB0C88008D5407 /* FieldInput.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FieldInput.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -127,6 +133,7 @@
 				3D7C0E2629A853CF002DCCC3 /* SceneDelegate.m */,
 				3D7C0E2829A853CF002DCCC3 /* ViewController.h */,
 				3D7C0E2929A853CF002DCCC3 /* ViewController.m */,
+				3DAA0AC229AAFC98008D5407 /* Src */,
 				3D7C0E2B29A853CF002DCCC3 /* Main.storyboard */,
 				3D7C0E2E29A853D1002DCCC3 /* Assets.xcassets */,
 				3D7C0E3029A853D1002DCCC3 /* LaunchScreen.storyboard */,
@@ -173,6 +180,17 @@
 				3DAA0AC029A9B0A0008D5407 /* config.ini.tpl */,
 			);
 			path = Files;
+			sourceTree = "<group>";
+		};
+		3DAA0AC229AAFC98008D5407 /* Src */ = {
+			isa = PBXGroup;
+			children = (
+				3DAA0AC329AAFCD6008D5407 /* SetupView.h */,
+				3DAA0AC429AAFCD6008D5407 /* SetupView.m */,
+				3DAA0AC629AB0C88008D5407 /* FieldInput.h */,
+				3DAA0AC729AB0C88008D5407 /* FieldInput.m */,
+			);
+			path = Src;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -328,6 +346,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3DAA0AC529AAFCD6008D5407 /* SetupView.m in Sources */,
+				3DAA0AC829AB0C88008D5407 /* FieldInput.m in Sources */,
 				3D7C0E2A29A853CF002DCCC3 /* ViewController.m in Sources */,
 				3D7C0E2429A853CF002DCCC3 /* AppDelegate.m in Sources */,
 				3D7C0E3529A853D1002DCCC3 /* main.m in Sources */,
