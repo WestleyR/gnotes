@@ -13,11 +13,6 @@
     NSMutableArray *noteTitles;
 }
 
-// REMOVE:
-@property (weak, nonatomic) IBOutlet UILabel *labelResponse;
-@property (weak, nonatomic) IBOutlet UIActivityIndicatorView *loadingWheelMiddle;
-
-
 
 @property (weak, nonatomic) IBOutlet UITableView *tableViewNotes;
 

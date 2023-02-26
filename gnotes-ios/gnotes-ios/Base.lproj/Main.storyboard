@@ -81,10 +81,10 @@
             </objects>
             <point key="canvasLocation" x="1057.2519083969464" y="-28.169014084507044"/>
         </scene>
-        <!--Setup View-->
+        <!--Setup View Controller-->
         <scene sceneID="WlB-jL-wZE">
             <objects>
-                <viewController storyboardIdentifier="setupView" id="Mfz-I2-yCl" customClass="SetupView" sceneMemberID="viewController">
+                <viewController storyboardIdentifier="setupView" id="Mfz-I2-yCl" customClass="SetupViewController" customModule="gnotes_ios" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" contentMode="scaleToFill" id="vfk-xa-M6G">
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -116,10 +116,10 @@
                                 <state key="normal" title="Button"/>
                                 <buttonConfiguration key="configuration" style="filled" title="DONE"/>
                                 <connections>
-                                    <action selector="buttonDone:" destination="Mfz-I2-yCl" eventType="touchDown" id="pd1-Dl-qYz"/>
+                                    <action selector="buttonDone:" destination="Mfz-I2-yCl" eventType="primaryActionTriggered" id="S5P-0H-8uF"/>
                                 </connections>
                             </button>
-                            <textField opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="248" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" placeholder="S3 Access Key" textAlignment="natural" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="jwa-XY-7NC" customClass="FieldInput">
+                            <textField opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="248" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" placeholder="S3 Access Key" textAlignment="natural" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="jwa-XY-7NC">
                                 <rect key="frame" x="16" y="272" width="361" height="34"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="34" id="826-BV-JpN"/>
@@ -127,7 +127,7 @@
                                 <fontDescription key="fontDescription" type="system" pointSize="14"/>
                                 <textInputTraits key="textInputTraits" returnKeyType="done"/>
                                 <connections>
-                                    <action selector="fieldAccessKey:" destination="Mfz-I2-yCl" eventType="primaryActionTriggered" id="NJf-I5-5Kk"/>
+                                    <action selector="fieldAccessKey:" destination="Mfz-I2-yCl" eventType="primaryActionTriggered" id="YkV-jX-OGF"/>
                                 </connections>
                             </textField>
                             <textField opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="248" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" placeholder="S3 Secret Key" textAlignment="natural" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="mep-RT-3mR">
@@ -149,7 +149,7 @@
                                 <fontDescription key="fontDescription" type="system" pointSize="14"/>
                                 <textInputTraits key="textInputTraits"/>
                                 <connections>
-                                    <action selector="fieldAccountID:" destination="Mfz-I2-yCl" eventType="primaryActionTriggered" id="1Ac-se-6tQ"/>
+                                    <action selector="fieldAccountID:" destination="Mfz-I2-yCl" eventType="primaryActionTriggered" id="ElH-hc-lvz"/>
                                 </connections>
                             </textField>
                             <textField opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="248" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" placeholder="16 Bit Encryption Key" textAlignment="natural" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="d3w-hV-RqG">
@@ -245,11 +245,11 @@
                     </view>
                     <navigationItem key="navigationItem" id="iBt-6T-eLE"/>
                     <connections>
-                        <outlet property="buttonDone" destination="rUh-fR-L89" id="Bwt-PU-To6"/>
-                        <outlet property="fieldAccessKey" destination="jwa-XY-7NC" id="20I-FJ-sLO"/>
-                        <outlet property="fieldAccountID" destination="M90-kj-SRb" id="BJg-Qv-btV"/>
-                        <outlet property="fieldCryptKey" destination="d3w-hV-RqG" id="55F-fK-QJg"/>
-                        <outlet property="fieldSecretKey" destination="mep-RT-3mR" id="3Ak-Pw-sWE"/>
+                        <outlet property="buttonDone" destination="rUh-fR-L89" id="c6x-nm-aJi"/>
+                        <outlet property="fieldAccessKey" destination="jwa-XY-7NC" id="omn-gz-BB9"/>
+                        <outlet property="fieldAccountID" destination="M90-kj-SRb" id="2UP-SM-e1v"/>
+                        <outlet property="fieldCryptKey" destination="d3w-hV-RqG" id="iew-bo-fFC"/>
+                        <outlet property="fieldSecretKey" destination="mep-RT-3mR" id="qa4-gw-Abx"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="W07-KX-uSD" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>

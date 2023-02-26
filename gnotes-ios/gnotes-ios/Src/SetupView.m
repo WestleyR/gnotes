@@ -5,6 +5,8 @@
 //  Created by Westley Rose on 2/25/23.
 //
 
+// TODO: REMOVE AS THIS IS REPLACES BY SetupViewController.swift
+
 #import "SetupView.h"
 
 @interface SetupView ()
@@ -13,6 +15,7 @@
 
 @implementation SetupView
 
+/*
 - (void)viewDidLoad {
     [super viewDidLoad];
     // Do any additional setup after loading the view.
@@ -89,5 +92,5 @@
     [self canEnableDone];
 }
 
-
+*/
 @end

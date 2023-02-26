@@ -6,5 +6,6 @@ a.out.dSYM
 /gnotes-ios/gnotes-ios/ios-lib/*
 /gnotes-ios/gnotes-ios/ios-lib/*.a
 gnotes-ios/gnotes-ios.xcodeproj/xcuserdata
+gnotes-ios/gnotes-ios.xcodeproj/project.xcworkspace/xcuserdata
 
 /bridge-c/*.so
