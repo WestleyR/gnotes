@@ -38,7 +38,7 @@ generate: $(SRC)
 build-c: generate
 	gcc -g -Wall example-c/main.c bridge-c/gnotes-bridge.so
 
-ios-arm64: $(SRC)
+$(IOS_OUT)/arm64.a: $(SRC)
 	CGO_ENABLED=1 \
 	GOOS=ios \
 	GOARCH=arm64 \
@@ -47,7 +47,7 @@ ios-arm64: $(SRC)
 	CGO_CFLAGS="-fembed-bitcode" \
 	go build -buildmode=c-archive -tags ios -o $(IOS_OUT)/arm64.a bridge-go/*.go
 
-ios-x86_64: $(SRC) 
+$(IOS_OUT)/x86_64.a: $(SRC)
 	CGO_ENABLED=1 \
 	GOOS=darwin \
 	GOARCH=amd64 \
@@ -55,7 +55,7 @@ ios-x86_64: $(SRC)
 	CC=$(PWD)/clangwrap.sh \
 	go build -buildmode=c-archive -tags ios -o $(IOS_OUT)/x86_64.a bridge-go/*.go
 
-ios: ios-arm64 ios-x86_64
+ios: $(IOS_OUT)/x86_64.a $(IOS_OUT)/arm64.a
 	lipo $(IOS_OUT)/x86_64.a $(IOS_OUT)/arm64.a -create -output $(IOS_OUT)/gnotes.a
 	cp $(IOS_OUT)/arm64.h $(IOS_OUT)/gnotes.h
 
