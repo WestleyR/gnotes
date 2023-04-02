@@ -97,6 +97,19 @@ func (self *SelfApp) LoadNotes() error {
 	// Now sort the notes by mod time
 	self.Notes.Sort()
 
+	// Make sure last selected book index is not out-of-range, could happen when deleting book
+	//	if self.Notes.LastSelected >= len(self.Notes.Books) || self.Notes.LastSelected == -1 {
+	//		self.Notes.LastSelected = len(self.Notes.Books) - 1
+	//		if self.Notes.LastSelected < 0 {
+	//			self.Notes.LastSelected = 0
+	//		}
+	//	}
+
+	// Make sure theres at lease one note folder
+	if len(self.Notes.Books) == 0 {
+		self.Notes.NewBook("Notes")
+	}
+
 	return nil
 }
 

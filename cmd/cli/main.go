@@ -64,10 +64,16 @@ func main() {
 		return
 	}
 
-	// Init the self app
-	app, err := gnotes.InitApp(gnotes.GetFileFromConfig("config.ini"))
-	if err != nil {
-		log.Fatalf("Failed to init app: %s\n", err)
+	// Setup the gui (cli)
+	gui := newGUI()
+
+	{
+		// Init the self app
+		app, err := gnotes.InitApp(gnotes.GetFileFromConfig("config.ini"))
+		if err != nil {
+			log.Fatalf("Failed to init app: %s\n", err)
+		}
+		gui.app = app
 	}
 
 	if *decryptFlag != "" {
@@ -75,7 +81,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		b, err = app.Config.S3.Decrypt(b)
+		b, err = gui.app.Config.S3.Decrypt(b)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -85,26 +91,23 @@ func main() {
 	}
 
 	// Set the cli opts
-	app.CliOpts.SkipDownload = *skipDownloadFlag
-	app.CliOpts.NewNote = *newNoteFlag
-
-	// Setup the gui (cli)
-	gui := newGUI()
+	gui.app.CliOpts.SkipDownload = *skipDownloadFlag
+	gui.app.CliOpts.NewNote = *newNoteFlag
 
 	// Load the notes either from s3, or local stash
-	err = app.LoadNotes()
+	err := gui.app.LoadNotes()
 	if err != nil {
 		log.Fatalf("Failed to load notes: %s\n", err)
 	}
 
 	// Before starting the ui, see if theres anything to be done first
 	if *uploadFileFlag != "" {
-		err := app.Notes.Books[0].NewAttachment(app.Config.App.NoteDir, *uploadFileFlag)
+		err := gui.app.Notes.Books[0].NewAttachment(gui.app.Config.App.NoteDir, *uploadFileFlag)
 		if err != nil {
 			log.Fatalf("Failed to add attachment: %s", err)
 		}
 
-		err = app.SaveIndexFile()
+		err = gui.app.SaveIndexFile()
 		if err != nil {
 			log.Fatalf("Failed to save notes: %s", err)
 		}
@@ -114,13 +117,15 @@ func main() {
 	}
 
 	// Start the app
-	gui.loadUI(app)
+	gui.loadUI()
 
 	// Always save the notes if needed
-	err = app.SaveIndexFile()
+	err = gui.app.SaveIndexFile()
 	if err != nil {
 		log.Fatalf("Failed to upload notes: %s", err)
 	}
+
+	uilog.Dump()
 
 	fmt.Println("END")
 }

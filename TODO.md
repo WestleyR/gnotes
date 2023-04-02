@@ -33,6 +33,12 @@
  - [ ] Test changing a note, closing the app without uploading the index.json file and see how it recovers (should use local file maybe?) or just update the index.json right away
  - [x] Add flags to generate user id and 16 crypt key
  - [ ] Fix cmd/cli directory names to be go install-able
+ - [ ] Should autoclean not tracked notes... maybe, since that are not uploaded anyway
+ - [ ] Add flag to autoclean not tracked notes, ^^^ replaces above item
+ - [ ] Should be a way to delete whole folders
+ - [ ] When uploading attachments, should be a way to specify which folder it should be uploaded to, not just the current/last selected
+ - [ ] Add window view for errors
+ - [ ] Deleting a note folder does not delete the directory, maybe thats okay for backup
 
 ## v3 (not even started)
  - [ ] Be diff based for even faster performance (maybe, probaly not needed at all, v2 is fine)

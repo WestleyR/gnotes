@@ -1,4 +1,4 @@
-// Copyright 2021 The TCell Authors
+// Copyright 2022 The TCell Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use file except in compliance with the License.
@@ -48,13 +48,6 @@ type SimulationScreen interface {
 
 	// InjectMouse injects a mouse event.
 	InjectMouse(x, y int, buttons ButtonMask, mod ModMask)
-
-	// SetSize resizes the underlying physical screen.  It also causes
-	// a resize event to be injected during the next Show() or Sync().
-	// A new physical contents array will be allocated (with data from
-	// the old copied), so any prior value obtained with GetContents
-	// won't be used anymore
-	SetSize(width, height int)
 
 	// GetContents returns screen contents as an array of
 	// cells, along with the physical width & height.   Note that the
@@ -281,6 +274,8 @@ func (s *simscreen) hideCursor() {
 	s.cursorvis = false
 }
 
+func (s *simscreen) SetCursorStyle(CursorStyle) {}
+
 func (s *simscreen) Show() {
 	s.Lock()
 	s.resize()
@@ -349,6 +344,26 @@ func (s *simscreen) resize() {
 
 func (s *simscreen) Colors() int {
 	return 256
+}
+
+func (s *simscreen) ChannelEvents(ch chan<- Event, quit <-chan struct{}) {
+	defer close(ch)
+	for {
+		select {
+		case <-quit:
+			return
+		case <-s.quit:
+			return
+		case ev := <-s.evch:
+			select {
+			case <-quit:
+				return
+			case <-s.quit:
+				return
+			case ch <- ev:
+			}
+		}
+	}
 }
 
 func (s *simscreen) PollEvent() Event {

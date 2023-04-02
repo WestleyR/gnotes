@@ -24,7 +24,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fvbommel/sortorder"
 	"github.com/google/uuid"
 )
 
@@ -54,6 +53,7 @@ var self *SelfApp
 // NoteBook is the collection of all sub-categroies.
 type NoteBook struct {
 	Books []*Book `json:"folders"`
+	//LastSelected int     `json:"last_selected"`
 }
 
 // Book contains all the notes for the Name of the sub-categroies.
@@ -61,7 +61,9 @@ type Book struct {
 	// Name is the sub-dir name
 	Name string `json:"name"`
 	// Notes contains all the notes in the sub-dir
-	Notes []*Note `json:"notes"`
+	Notes    []*Note `json:"notes"`
+	Modified int64   `json:"modified"`
+	Selected bool    `json:"selected"`
 }
 
 // Note is all the data for a specific note.
@@ -91,10 +93,11 @@ func InitApp(configPath string) (*SelfApp, error) {
 
 	app.Notes = &NoteBook{
 		Books: []*Book{
-			&Book{
+			{
 				// Default
-				Name:  "Notes",
-				Notes: []*Note{},
+				Name:     "Notes",
+				Notes:    []*Note{},
+				Selected: true,
 			},
 		},
 	}
@@ -105,6 +108,28 @@ func InitApp(configPath string) (*SelfApp, error) {
 	self = app
 
 	return app, nil
+}
+
+func (b *NoteBook) SetSelected(index int) {
+	b.deselectAll()
+	b.Books[index].Selected = true
+}
+
+func (b *NoteBook) GetSelected() *Book {
+	for _, n := range b.Books {
+		if n.Selected {
+			return n
+		}
+	}
+
+	// Non selected, could be a bug.
+	return b.Books[0]
+}
+
+func (b *NoteBook) deselectAll() {
+	for _, n := range b.Books {
+		n.Selected = false
+	}
 }
 
 // Download will download the note if needed based on hash.
@@ -147,9 +172,47 @@ func (n *Note) Download(noteDir string, s3Config S3Config) error {
 	return nil
 }
 
+// SaveNoteIndex does the same thing as Note.Save(), but also updates the
+// modified timestamp for the book.
+func (b *Book) SaveNoteIndex(noteIndex int) error {
+	n := b.Notes[noteIndex]
+
+	noteFile := filepath.Join(self.Config.App.NoteDir, "notes", n.S3Path)
+
+	currentHash, err := Sha1File(noteFile)
+	if err != nil {
+		return fmt.Errorf("failed to get checksum for local cached file: %w", err)
+	}
+
+	// Double check to make sure current hash is not empty
+	if currentHash != "" && n.Hash != currentHash {
+		// Upload the note that changed
+		err := self.Config.S3.UploadFile(
+			noteFile,
+			filepath.Join(self.Config.S3.UserID, "notes", n.S3Path),
+		)
+		if err != nil {
+			return err
+		}
+
+		// After uploading, update the hash tracker
+		n.Hash = currentHash
+		n.Changed()
+
+		self.IndexNeedsUpdating = true
+		b.Changed(noteIndex)
+
+		return nil
+	}
+	log.Printf("Not uploading note since it has not changed")
+
+	return nil
+}
+
 // Save will save a note to the s3 server. Should be called after editing. Will
 // NOT update the note index file. Does not update/upload if the checksum did not
 // change.
+// Depercated: use Book.SaveNoteIndex() instead (MAYBE...)
 func (n *Note) Save() error {
 	noteFile := filepath.Join(self.Config.App.NoteDir, "notes", n.S3Path)
 
@@ -181,8 +244,42 @@ func (n *Note) Save() error {
 	return nil
 }
 
+func (n *NoteBook) DeleteBook(index int) error {
+	n.Books = append(n.Books[:index], n.Books[index+1:]...)
+	self.IndexNeedsUpdating = true
+
+	return nil
+}
+
 // DeleteNote will delete a specific note. Will delete the note from s3 imetitly,
 // and reupload the index files.
+func (b *Book) DeleteNote(noteIndex int) error {
+	notePath := filepath.Dir(filepath.Join(self.Config.App.NoteDir, "notes", b.Notes[noteIndex].S3Path))
+
+	log.Printf("Removing/deleting note: %s", notePath)
+
+	err := os.RemoveAll(notePath)
+	if err != nil {
+		return fmt.Errorf("failed to delete note: %w", err)
+	}
+
+	// Delete it from s3
+	err = self.Config.S3.Delete(filepath.Join(self.Config.S3.UserID, "notes", b.Notes[noteIndex].S3Path))
+	if err != nil {
+		return fmt.Errorf("failed to delete note from s3: %w", err)
+	}
+
+	b.Notes = append(b.Notes[:noteIndex], b.Notes[noteIndex+1:]...)
+
+	self.IndexNeedsUpdating = true
+	b.Changed(-1)
+
+	return nil
+}
+
+// DeleteNote will delete a specific note. Will delete the note from s3 imetitly,
+// and reupload the index files.
+// Depercated: use Book.DeleteNote()
 func (self *SelfApp) DeleteNote(bookIndex, noteIndex int) error {
 	notePath := filepath.Dir(filepath.Join(self.Config.App.NoteDir, "notes", self.Notes.Books[bookIndex].Notes[noteIndex].S3Path))
 
@@ -243,6 +340,11 @@ func (n *Note) GetTitle(noteDir string) string {
 	return n.Title
 }
 
+func (b *Book) HRModifiedTime() string {
+	c := time.Unix(b.Modified, 0)
+	return c.Format("2006-01-02 07:05:45PM")
+}
+
 func (a *Note) Info() string {
 	if a.IsAttachment {
 		c := time.Unix(a.Created, 0)
@@ -255,7 +357,17 @@ func (a *Note) Info() string {
 	return fmt.Sprintf("Created on %s. last modified on %s", c.Format("2006-01-02"), m.Format("2006-01-02"))
 }
 
+// Changed updates the modified timestamp for the book and note.
+func (b *Book) Changed(noteIndex int) {
+	b.Modified = time.Now().Unix()
+
+	if noteIndex != -1 {
+		b.Notes[noteIndex].Modified = b.Modified
+	}
+}
+
 // Changed will update the modified date for a note.
+// Depercated: use Book.Changed()
 func (n *Note) Changed() {
 	n.Modified = time.Now().Unix()
 }
@@ -319,6 +431,9 @@ func (book *Book) NewAttachment(noteDir, path string) error {
 	if err != nil {
 		return fmt.Errorf("failed to upload new attachment: %w", err)
 	}
+
+	// Manually update the modified timestamp for the book
+	book.Changed(-1)
 
 	return nil
 }
@@ -392,10 +507,40 @@ func (book *Book) NewNote(noteDir string, completion func()) error {
 	return book.NewNoteWithContentsOfFile(noteDir, "", completion)
 }
 
+func (noteBook *NoteBook) NewBook(name string) error {
+	if name == "" {
+		return fmt.Errorf("name cannot be empty")
+	}
+
+	newBook := &Book{
+		Name:     name,
+		Notes:    []*Note{},
+		Selected: true,
+	}
+	newBook.Changed(-1)
+
+	noteBook.deselectAll()
+
+	noteBook.Books = append(noteBook.Books, newBook)
+
+	return nil
+}
+
 func (n *NoteBook) Sort() {
-	sort.Slice(n.Books, func(i, j int) bool {
-		return sortorder.NaturalLess(n.Books[i].Name, n.Books[j].Name)
-	})
+	//	sort.Slice(n.Books, func(i, j int) bool {
+	//		return n.Books[i].Modified > n.Books[j].Modified
+	//	})
+
+	sorting := true
+	for sorting {
+		sorting = false
+		for i := 0; i < len(n.Books)-1; i++ {
+			if n.Books[i].Modified < n.Books[i+1].Modified {
+				n.Books[i], n.Books[i+1] = n.Books[i+1], n.Books[i]
+				sorting = true
+			}
+		}
+	}
 
 	for _, b := range n.Books {
 		b.Sort()

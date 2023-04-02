@@ -10,7 +10,6 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	colorful "github.com/lucasb-eyer/go-colorful"
-	runewidth "github.com/mattn/go-runewidth"
 	"github.com/rivo/uniseg"
 )
 
@@ -45,12 +44,46 @@ type textViewRegion struct {
 	FromX, FromY, ToX, ToY int
 }
 
-// TextView is a box which displays text. It implements the io.Writer interface
-// so you can stream text to it. This does not trigger a redraw automatically
+// TextViewWriter is a writer that can be used to write to and clear a TextView
+// in batches, i.e. multiple writes with the lock only being acquired once. Don't
+// instantiated this class directly but use the TextView's BatchWriter method
+// instead.
+type TextViewWriter struct {
+	t *TextView
+}
+
+// Close implements io.Closer for the writer by unlocking the original TextView.
+func (w TextViewWriter) Close() error {
+	w.t.Unlock()
+	return nil
+}
+
+// Clear removes all text from the buffer.
+func (w TextViewWriter) Clear() {
+	w.t.clear()
+}
+
+// Write implements the io.Writer interface. It behaves like the TextView's
+// Write() method except that it does not acquire the lock.
+func (w TextViewWriter) Write(p []byte) (n int, err error) {
+	return w.t.write(p)
+}
+
+// HasFocus returns whether the underlying TextView has focus.
+func (w TextViewWriter) HasFocus() bool {
+	return w.t.hasFocus
+}
+
+// TextView is a box which displays text. While the text to be displayed can be
+// changed or appended to, there is no functionality that allows the user to
+// edit text. For that, TextArea should be used.
+//
+// TextView implements the io.Writer interface so you can stream text to it,
+// appending to the existing text. This does not trigger a redraw automatically
 // but if a handler is installed via SetChangedFunc(), you can cause it to be
 // redrawn. (See SetChangedFunc() for more details.)
 //
-// Navigation
+// # Navigation
 //
 // If the text view is scrollable (the default), text is kept in a buffer which
 // may be larger than the screen and can be navigated similarly to Vim:
@@ -69,27 +102,27 @@ type textViewRegion struct {
 //
 // Use SetInputCapture() to override or modify keyboard input.
 //
-// Colors
+// # Colors
 //
 // If dynamic colors are enabled via SetDynamicColors(), text color can be
 // changed dynamically by embedding color strings in square brackets. This works
 // the same way as anywhere else. Please see the package documentation for more
 // information.
 //
-// Regions and Highlights
+// # Regions and Highlights
 //
 // If regions are enabled via SetRegions(), you can define text regions within
 // the text and assign region IDs to them. Text regions start with region tags.
 // Region tags are square brackets that contain a region ID in double quotes,
 // for example:
 //
-//   We define a ["rg"]region[""] here.
+//	We define a ["rg"]region[""] here.
 //
 // A text region ends with the next region tag. Tags with no region ID ([""])
 // don't start new regions. They can therefore be used to mark the end of a
 // region. Region IDs must satisfy the following regular expression:
 //
-//   [a-zA-Z0-9_,;: \-\.]+
+//	[a-zA-Z0-9_,;: \-\.]+
 //
 // Regions can be highlighted by calling the Highlight() function with one or
 // more region IDs. This can be used to display search results, for example.
@@ -97,10 +130,21 @@ type textViewRegion struct {
 // The ScrollToHighlight() function can be used to jump to the currently
 // highlighted region once when the text view is drawn the next time.
 //
+// # Large Texts
+//
+// This widget is not designed for very large texts as word wrapping, color and
+// region tag handling, and proper Unicode handling will result in a significant
+// performance hit the longer your text gets. Consider using SetMaxLines() to
+// limit the number of lines in the text view.
+//
 // See https://github.com/rivo/tview/wiki/TextView for an example.
 type TextView struct {
 	sync.Mutex
 	*Box
+
+	// The size of the text area. If set to 0, the text view will use the entire
+	// available space.
+	width, height int
 
 	// The text buffer.
 	buffer []string
@@ -111,6 +155,15 @@ type TextView struct {
 	// The processed line index. This is nil if the buffer has changed and needs
 	// to be re-indexed.
 	index []*textViewIndex
+
+	// The label text shown, usually when part of a form.
+	label string
+
+	// The width of the text area's label.
+	labelWidth int
+
+	// The label style.
+	labelStyle tcell.Style
 
 	// The text alignment, one of AlignLeft, AlignCenter, or AlignRight.
 	align int
@@ -142,7 +195,8 @@ type TextView struct {
 	// If set to true, the text view will always remain at the end of the content.
 	trackEnd bool
 
-	// The number of characters to be skipped on each line (not in wrap mode).
+	// The number of characters to be skipped on each line (not used in wrap
+	// mode).
 	columnOffset int
 
 	// The maximum number of lines kept in the line index, effectively the
@@ -165,8 +219,9 @@ type TextView struct {
 	// after punctuation characters.
 	wordWrap bool
 
-	// The (starting) color of the text.
-	textColor tcell.Color
+	// The (starting) style of the text. This also defines the background color
+	// of the main text element.
+	textStyle tcell.Style
 
 	// If set to true, the text color can be changed dynamically by piping color
 	// strings in square brackets to the text view.
@@ -194,21 +249,69 @@ type TextView struct {
 	// An optional function which is called when one or more regions were
 	// highlighted.
 	highlighted func(added, removed, remaining []string)
+
+	// A callback function set by the Form class and called when the user leaves
+	// this form item.
+	finished func(tcell.Key)
 }
 
 // NewTextView returns a new text view.
 func NewTextView() *TextView {
 	return &TextView{
 		Box:           NewBox(),
+		labelStyle:    tcell.StyleDefault.Foreground(Styles.SecondaryTextColor),
 		highlights:    make(map[string]struct{}),
 		lineOffset:    -1,
 		scrollable:    true,
 		align:         AlignLeft,
 		wrap:          true,
-		textColor:     Styles.PrimaryTextColor,
+		textStyle:     tcell.StyleDefault.Background(Styles.PrimitiveBackgroundColor).Foreground(Styles.PrimaryTextColor),
 		regions:       false,
 		dynamicColors: false,
 	}
+}
+
+// SetLabel sets the text to be displayed before the text view.
+func (t *TextView) SetLabel(label string) *TextView {
+	t.label = label
+	return t
+}
+
+// GetLabel returns the text to be displayed before the text view.
+func (t *TextView) GetLabel() string {
+	return t.label
+}
+
+// SetLabelWidth sets the screen width of the label. A value of 0 will cause the
+// primitive to use the width of the label string.
+func (t *TextView) SetLabelWidth(width int) *TextView {
+	t.labelWidth = width
+	return t
+}
+
+// SetSize sets the screen size of the main text element of the text view. This
+// element is always located next to the label which is always located in the
+// top left corner. If any of the values are 0 or larger than the available
+// space, the available space will be used.
+func (t *TextView) SetSize(rows, columns int) *TextView {
+	t.width = columns
+	t.height = rows
+	return t
+}
+
+// GetFieldWidth returns this primitive's field width.
+func (t *TextView) GetFieldWidth() int {
+	return t.width
+}
+
+// GetFieldHeight returns this primitive's field height.
+func (t *TextView) GetFieldHeight() int {
+	return t.height
+}
+
+// SetDisabled sets whether or not the item is disabled / read-only.
+func (t *TextView) SetDisabled(disabled bool) FormItem {
+	return t // Text views are always read-only.
 }
 
 // SetScrollable sets the flag that decides whether or not the text view is
@@ -274,15 +377,38 @@ func (t *TextView) SetTextAlign(align int) *TextView {
 // dynamically by sending color strings in square brackets to the text view if
 // dynamic colors are enabled).
 func (t *TextView) SetTextColor(color tcell.Color) *TextView {
-	t.textColor = color
+	t.textStyle = t.textStyle.Foreground(color)
+	return t
+}
+
+// SetBackgroundColor overrides its implementation in Box to set the background
+// color of this primitive. For backwards compatibility reasons, it also sets
+// the background color of the main text element.
+func (t *TextView) SetBackgroundColor(color tcell.Color) *Box {
+	t.Box.SetBackgroundColor(color)
+	t.textStyle = t.textStyle.Background(color)
+	return t.Box
+}
+
+// SetTextStyle sets the initial style of the text (which can be changed
+// dynamically by sending color strings in square brackets to the text view if
+// dynamic colors are enabled). This style's background color also determines
+// the background color of the main text element (even if empty).
+func (t *TextView) SetTextStyle(style tcell.Style) *TextView {
+	t.textStyle = style
 	return t
 }
 
 // SetText sets the text of this text view to the provided string. Previously
-// contained text will be removed.
+// contained text will be removed. As with writing to the text view io.Writer
+// interface directly, this does not trigger an automatic redraw but it will
+// trigger the "changed" callback if one is set.
 func (t *TextView) SetText(text string) *TextView {
-	t.Clear()
-	fmt.Fprint(t, text)
+	batch := t.BatchWriter()
+	defer batch.Close()
+
+	batch.Clear()
+	fmt.Fprint(batch, text)
 	return t
 }
 
@@ -290,9 +416,10 @@ func (t *TextView) SetText(text string) *TextView {
 // to true, any region/color tags are stripped from the text.
 func (t *TextView) GetText(stripAllTags bool) string {
 	// Get the buffer.
-	buffer := make([]string, len(t.buffer), len(t.buffer)+1)
-	copy(buffer, t.buffer)
+	buffer := t.buffer
 	if !stripAllTags {
+		buffer = make([]string, len(t.buffer), len(t.buffer)+1)
+		copy(buffer, t.buffer)
 		buffer = append(buffer, string(t.recentBytes))
 	}
 
@@ -313,6 +440,12 @@ func (t *TextView) GetText(stripAllTags bool) string {
 	}
 
 	return text
+}
+
+// GetOriginalLineCount returns the number of lines in the original text buffer,
+// i.e. the number of newline characters plus one.
+func (t *TextView) GetOriginalLineCount() int {
+	return len(t.buffer)
 }
 
 // SetDynamicColors sets the flag that allows the text color to be changed
@@ -376,6 +509,22 @@ func (t *TextView) SetHighlightedFunc(handler func(added, removed, remaining []s
 	return t
 }
 
+// SetFinishedFunc sets a callback invoked when the user leaves this form item.
+func (t *TextView) SetFinishedFunc(handler func(key tcell.Key)) FormItem {
+	t.finished = handler
+	return t
+}
+
+// SetFormAttributes sets attributes shared by all form items.
+func (t *TextView) SetFormAttributes(labelWidth int, labelColor, bgColor, fieldTextColor, fieldBgColor tcell.Color) FormItem {
+	t.labelWidth = labelWidth
+	t.backgroundColor = bgColor
+	t.labelStyle = t.labelStyle.Foreground(labelColor)
+	// We ignore the field background color because this is a read-only element.
+	t.textStyle = tcell.StyleDefault.Foreground(fieldTextColor).Background(bgColor)
+	return t
+}
+
 // ScrollTo scrolls to the specified row and column (both starting with 0).
 func (t *TextView) ScrollTo(row, column int) *TextView {
 	if !t.scrollable {
@@ -419,10 +568,19 @@ func (t *TextView) GetScrollOffset() (row, column int) {
 
 // Clear removes all text from the buffer.
 func (t *TextView) Clear() *TextView {
+	t.Lock()
+	defer t.Unlock()
+
+	t.clear()
+	return t
+}
+
+// clear is the internal implementaton of clear. It is used by TextViewWriter
+// and anywhere that we need to perform a write without locking the buffer.
+func (t *TextView) clear() {
 	t.buffer = nil
 	t.recentBytes = nil
 	t.index = nil
-	return t
 }
 
 // Highlight specifies which regions should be highlighted. If highlight
@@ -565,10 +723,11 @@ func (t *TextView) GetRegionText(regionID string) string {
 		for pos, ch := range str {
 			// Skip any color tags.
 			if currentTag < len(colorTagIndices) && pos >= colorTagIndices[currentTag][0] && pos < colorTagIndices[currentTag][1] {
-				if pos == colorTagIndices[currentTag][1]-1 {
+				tag := currentTag
+				if pos == colorTagIndices[tag][1]-1 {
 					currentTag++
 				}
-				if colorTagIndices[currentTag][1]-colorTagIndices[currentTag][0] > 2 {
+				if colorTagIndices[tag][1]-colorTagIndices[tag][0] > 2 {
 					continue
 				}
 			}
@@ -606,7 +765,15 @@ func (t *TextView) Focus(delegate func(p Primitive)) {
 	// Implemented here with locking because this is used by layout primitives.
 	t.Lock()
 	defer t.Unlock()
-	t.hasFocus = true
+
+	// But if we're part of a form and not scrollable, there's nothing the user
+	// can do here so we're finished.
+	if t.finished != nil && !t.scrollable {
+		t.finished(-1)
+		return
+	}
+
+	t.Box.Focus(delegate)
 }
 
 // HasFocus returns whether or not this primitive has focus.
@@ -615,17 +782,24 @@ func (t *TextView) HasFocus() bool {
 	// callback.
 	t.Lock()
 	defer t.Unlock()
-	return t.hasFocus
+	return t.Box.HasFocus()
 }
 
 // Write lets us implement the io.Writer interface. Tab characters will be
 // replaced with TabSize space characters. A "\n" or "\r\n" will be interpreted
 // as a new line.
 func (t *TextView) Write(p []byte) (n int, err error) {
-	// Notify at the end.
 	t.Lock()
+	defer t.Unlock()
+
+	return t.write(p)
+}
+
+// write is the internal implementation of Write. It is used by TextViewWriter
+// and anywhere that we need to perform a write without locking the buffer.
+func (t *TextView) write(p []byte) (n int, err error) {
+	// Notify at the end.
 	changed := t.changed
-	t.Unlock()
 	if changed != nil {
 		defer func() {
 			// We always call the "changed" function in a separate goroutine to avoid
@@ -633,9 +807,6 @@ func (t *TextView) Write(p []byte) (n int, err error) {
 			go changed()
 		}()
 	}
-
-	t.Lock()
-	defer t.Unlock()
 
 	// Copy data over.
 	newBytes := append(t.recentBytes, p...)
@@ -685,6 +856,30 @@ func (t *TextView) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
+// BatchWriter returns a new writer that can be used to write into the buffer
+// but without Locking/Unlocking the buffer on every write, as TextView's
+// Write() and Clear() functions do. The lock will be acquired once when
+// BatchWriter is called, and will be released when the returned writer is
+// closed. Example:
+//
+//	tv := tview.NewTextView()
+//	w := tv.BatchWriter()
+//	defer w.Close()
+//	w.Clear()
+//	fmt.Fprintln(w, "To sit in solemn silence")
+//	fmt.Fprintln(w, "on a dull, dark, dock")
+//	fmt.Println(tv.GetText(false))
+//
+// Note that using the batch writer requires you to manage any issues that may
+// arise from concurrency yourself. See package description for details on
+// dealing with concurrency.
+func (t *TextView) BatchWriter() TextViewWriter {
+	t.Lock()
+	return TextViewWriter{
+		t: t,
+	}
+}
+
 // reindexBuffer re-indexes the buffer such that we can use it to easily draw
 // the buffer onto the screen. Each line in the index will contain a pointer
 // into the buffer from which on we will print text. It will also contain the
@@ -720,14 +915,21 @@ func (t *TextView) reindexBuffer(width int) {
 		str = strippedStr
 		if t.wrap && len(str) > 0 {
 			for len(str) > 0 {
-				extract := runewidth.Truncate(str, width, "")
-				if len(extract) == 0 {
-					// We'll extract at least one grapheme cluster.
-					gr := uniseg.NewGraphemes(str)
-					gr.Next()
-					_, to := gr.Positions()
-					extract = str[:to]
+				// Truncate str to width.
+				var splitPos, clusterWidth, lineWidth int
+				state := -1
+				remaining := str
+				for splitPos == 0 || len(remaining) > 0 { // We'll extract at least one grapheme cluster.
+					var cluster string
+					cluster, remaining, clusterWidth, state = uniseg.FirstGraphemeClusterInString(remaining, state)
+					lineWidth += clusterWidth
+					if splitPos > 0 && lineWidth > width {
+						break
+					}
+					splitPos += len(cluster)
 				}
+				extract := str[:splitPos]
+
 				if t.wordWrap && len(extract) < len(str) {
 					// Add any spaces from the next line.
 					if spaces := spacePattern.FindStringIndex(str[len(extract):]); spaces != nil && spaces[0] == 0 {
@@ -818,7 +1020,7 @@ func (t *TextView) reindexBuffer(width int) {
 						line := len(t.index)
 						if t.fromHighlight < 0 {
 							t.fromHighlight, t.toHighlight = line, line
-							t.posHighlight = stringWidth(splitLine[:strippedTagStart])
+							t.posHighlight = uniseg.StringWidth(splitLine[:strippedTagStart])
 						} else if line > t.toHighlight {
 							t.toHighlight = line
 						}
@@ -836,7 +1038,7 @@ func (t *TextView) reindexBuffer(width int) {
 
 			// Append this line.
 			line.NextPos = originalPos
-			line.Width = stringWidth(splitLine)
+			line.Width = uniseg.StringWidth(splitLine)
 			t.index = append(t.index, line)
 		}
 
@@ -848,7 +1050,7 @@ func (t *TextView) reindexBuffer(width int) {
 				if spaces != nil && spaces[len(spaces)-1][1] == len(str) {
 					oldNextPos := line.NextPos
 					line.NextPos -= spaces[len(spaces)-1][1] - spaces[len(spaces)-1][0]
-					line.Width -= stringWidth(t.buffer[line.Line][line.NextPos:oldNextPos])
+					line.Width -= uniseg.StringWidth(t.buffer[line.Line][line.NextPos:oldNextPos])
 				}
 			}
 		}
@@ -918,11 +1120,47 @@ func (t *TextView) Draw(screen tcell.Screen) {
 	t.Box.DrawForSubclass(screen, t)
 	t.Lock()
 	defer t.Unlock()
-	totalWidth, totalHeight := screen.Size()
 
 	// Get the available size.
 	x, y, width, height := t.GetInnerRect()
 	t.pageSize = height
+
+	// Draw label.
+	_, labelBg, _ := t.labelStyle.Decompose()
+	if t.labelWidth > 0 {
+		labelWidth := t.labelWidth
+		if labelWidth > width {
+			labelWidth = width
+		}
+		printWithStyle(screen, t.label, x, y, 0, labelWidth, AlignLeft, t.labelStyle, labelBg == tcell.ColorDefault)
+		x += labelWidth
+		width -= labelWidth
+	} else {
+		_, drawnWidth, _, _ := printWithStyle(screen, t.label, x, y, 0, width, AlignLeft, t.labelStyle, labelBg == tcell.ColorDefault)
+		x += drawnWidth
+		width -= drawnWidth
+	}
+
+	// What's the space for the text element?
+	if t.width > 0 && t.width < width {
+		width = t.width
+	}
+	if t.height > 0 && t.height < height {
+		height = t.height
+	}
+	if width <= 0 {
+		return // No space left for the text area.
+	}
+
+	// Draw the text element if necessary.
+	_, bg, _ := t.textStyle.Decompose()
+	if bg != t.backgroundColor {
+		for row := 0; row < height; row++ {
+			for column := 0; column < width; column++ {
+				screen.SetContent(x+column, y+row, ' ', nil, t.textStyle)
+			}
+		}
+	}
 
 	// If the width has changed, we need to reindex.
 	if width != t.lastWidth && t.wrap {
@@ -1005,10 +1243,9 @@ func (t *TextView) Draw(screen tcell.Screen) {
 	}
 
 	// Draw the buffer.
-	defaultStyle := tcell.StyleDefault.Foreground(t.textColor).Background(t.backgroundColor)
 	for line := t.lineOffset; line < len(t.index); line++ {
 		// Are we done?
-		if line-t.lineOffset >= height || y+line-t.lineOffset >= totalHeight {
+		if line-t.lineOffset >= height {
 			break
 		}
 
@@ -1057,7 +1294,7 @@ func (t *TextView) Draw(screen tcell.Screen) {
 		// Print the line.
 		if y+line-t.lineOffset >= 0 {
 			var colorPos, regionPos, escapePos, tagOffset, skipped int
-			iterateString(strippedText, func(main rune, comb []rune, textPos, textWidth, screenPos, screenWidth int) bool {
+			iterateString(strippedText, func(main rune, comb []rune, textPos, textWidth, screenPos, screenWidth, boundaries int) bool {
 				// Process tags.
 				for {
 					if colorPos < len(colorTags) && textPos+tagOffset >= colorTagIndices[colorPos][0] && textPos+tagOffset < colorTagIndices[colorPos][1] {
@@ -1097,7 +1334,7 @@ func (t *TextView) Draw(screen tcell.Screen) {
 				}
 
 				// Mix the existing style with the new style.
-				style := overlayStyle(defaultStyle, foregroundColor, backgroundColor, attributes)
+				style := overlayStyle(t.textStyle, foregroundColor, backgroundColor, attributes)
 
 				// Do we highlight this character?
 				var highlighted bool
@@ -1128,7 +1365,7 @@ func (t *TextView) Draw(screen tcell.Screen) {
 				}
 
 				// Stop at the right border.
-				if posX+screenWidth > width || x+posX >= totalWidth {
+				if posX+screenWidth > width {
 					return true
 				}
 
@@ -1169,6 +1406,9 @@ func (t *TextView) InputHandler() func(event *tcell.EventKey, setFocus func(p Pr
 		if key == tcell.KeyEscape || key == tcell.KeyEnter || key == tcell.KeyTab || key == tcell.KeyBacktab {
 			if t.done != nil {
 				t.done(key)
+			}
+			if t.finished != nil {
+				t.finished(key)
 			}
 			return
 		}
@@ -1231,6 +1471,9 @@ func (t *TextView) MouseHandler() func(action MouseAction, event *tcell.EventMou
 		}
 
 		switch action {
+		case MouseLeftDown:
+			setFocus(t)
+			consumed = true
 		case MouseLeftClick:
 			if t.regions {
 				// Find a region to highlight.
@@ -1245,7 +1488,6 @@ func (t *TextView) MouseHandler() func(action MouseAction, event *tcell.EventMou
 					break
 				}
 			}
-			setFocus(t)
 			consumed = true
 		case MouseScrollUp:
 			t.trackEnd = false

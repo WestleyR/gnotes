@@ -44,8 +44,8 @@ const (
 )
 
 // queuedUpdate represented the execution of f queued by
-// Application.QueueUpdate(). The "done" channel receives exactly one element
-// after f has executed.
+// Application.QueueUpdate(). If "done" is not nil, it receives exactly one
+// element after f has executed.
 type queuedUpdate struct {
 	f    func()
 	done chan struct{}
@@ -60,9 +60,9 @@ type queuedUpdate struct {
 // The following command displays a primitive p on the screen until Ctrl-C is
 // pressed:
 //
-//   if err := tview.NewApplication().SetRoot(p, true).Run(); err != nil {
-//       panic(err)
-//   }
+//	if err := tview.NewApplication().SetRoot(p, true).Run(); err != nil {
+//	    panic(err)
+//	}
 type Application struct {
 	sync.RWMutex
 
@@ -135,9 +135,16 @@ func NewApplication() *Application {
 // different one) by returning it or stop the key event processing by returning
 // nil.
 //
-// Note that this also affects the default event handling of the application
-// itself: Such a handler can intercept the Ctrl-C event which closes the
-// application.
+// The only default global key event is Ctrl-C which stops the application. It
+// requires special handling:
+//
+//   - If you do not wish to change the default behavior, return the original
+//     event object passed to your input capture function.
+//   - If you wish to block Ctrl-C from any functionality, return nil.
+//   - If you do not wish Ctrl-C to stop the application but still want to
+//     forward the Ctrl-C event to primitives down the hierarchy, return a new
+//     key event with the same key and modifiers, e.g.
+//     tcell.NewEventKey(tcell.KeyCtrlC, 0, tcell.ModNone).
 func (a *Application) SetInputCapture(capture func(event *tcell.EventKey) *tcell.EventKey) *Application {
 	a.inputCapture = capture
 	return a
@@ -181,6 +188,7 @@ func (a *Application) SetScreen(screen tcell.Screen) *Application {
 		// Run() has not been called yet.
 		a.screen = screen
 		a.Unlock()
+		screen.Init()
 		return a
 	}
 
@@ -212,7 +220,7 @@ func (a *Application) EnableMouse(enable bool) *Application {
 // when Stop() was called.
 func (a *Application) Run() error {
 	var (
-		err         error
+		err, appErr error
 		lastRedraw  time.Time   // The time the screen was last redrawn.
 		redrawTimer *time.Timer // A timer to schedule the next redraw.
 	)
@@ -314,6 +322,7 @@ EventLoop:
 
 				// Intercept keys.
 				var draw bool
+				originalEvent := event
 				if inputCapture != nil {
 					event = inputCapture(event)
 					if event == nil {
@@ -324,8 +333,9 @@ EventLoop:
 				}
 
 				// Ctrl-C closes the application.
-				if event.Key() == tcell.KeyCtrlC {
+				if event == originalEvent && event.Key() == tcell.KeyCtrlC {
 					a.Stop()
+					break
 				}
 
 				// Pass other key events to the root primitive.
@@ -369,12 +379,17 @@ EventLoop:
 				if isMouseDownAction {
 					a.mouseDownX, a.mouseDownY = event.Position()
 				}
+			case *tcell.EventError:
+				appErr = event
+				a.Stop()
 			}
 
 		// If we have updates, now is the time to execute them.
 		case update := <-a.updates:
 			update.f()
-			update.done <- struct{}{}
+			if update.done != nil {
+				update.done <- struct{}{}
+			}
 		}
 	}
 
@@ -382,7 +397,7 @@ EventLoop:
 	wg.Wait()
 	a.screen = nil
 
-	return nil
+	return appErr
 }
 
 // fireMouseActions analyzes the provided mouse event, derives mouse actions
@@ -454,8 +469,8 @@ func (a *Application) fireMouseActions(event *tcell.EventMouse) (consumed, isMou
 			if buttons&buttonEvent.button != 0 {
 				fire(buttonEvent.down)
 			} else {
-				fire(buttonEvent.up)
-				if !clickMoved {
+				fire(buttonEvent.up) // A user override might set event to nil.
+				if !clickMoved && event != nil {
 					if a.lastMouseClick.Add(DoubleClickInterval).Before(time.Now()) {
 						fire(buttonEvent.click)
 						a.lastMouseClick = time.Now()
@@ -607,6 +622,23 @@ func (a *Application) draw() *Application {
 	return a
 }
 
+// Sync forces a full re-sync of the screen buffer with the actual screen during
+// the next event cycle. This is useful for when the terminal screen is
+// corrupted so you may want to offer your users a keyboard shortcut to refresh
+// the screen.
+func (a *Application) Sync() *Application {
+	a.updates <- queuedUpdate{f: func() {
+		a.RLock()
+		screen := a.screen
+		a.RUnlock()
+		if screen == nil {
+			return
+		}
+		screen.Sync()
+	}}
+	return a
+}
+
 // SetBeforeDrawFunc installs a callback function which is invoked just before
 // the root primitive is drawn during screen updates. If the function returns
 // true, drawing will not continue, i.e. the root primitive will not be drawn
@@ -673,9 +705,9 @@ func (a *Application) ResizeToFullScreen(p Primitive) *Application {
 	return a
 }
 
-// SetFocus sets the focus on a new primitive. All key events will be redirected
-// to that primitive. Callers must ensure that the primitive will handle key
-// events.
+// SetFocus sets the focus to a new primitive. All key events will be directed
+// down the hierarchy (starting at the root) until a primitive handles them,
+// which per default goes towards the focused primitive.
 //
 // Blur() will be called on the previously focused primitive. Focus() will be
 // called on the new primitive.

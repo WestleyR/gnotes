@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build linux || aix || zos || solaris
 // +build linux aix zos solaris
 
 package tcell
@@ -24,6 +25,7 @@ import (
 
 // tcSetBufParams is used by the tty driver on UNIX systems to configure the
 // buffering parameters (minimum character count and minimum wait time in msec.)
+// This also waits for output to drain first.
 func tcSetBufParams(fd int, vMin uint8, vTime uint8) error {
 	_ = syscall.SetNonblock(fd, true)
 	tio, err := unix.IoctlGetTermios(fd, unix.TCGETS)
@@ -32,7 +34,7 @@ func tcSetBufParams(fd int, vMin uint8, vTime uint8) error {
 	}
 	tio.Cc[unix.VMIN] = vMin
 	tio.Cc[unix.VTIME] = vTime
-	if err = unix.IoctlSetTermios(fd, unix.TCSETS, tio); err != nil {
+	if err = unix.IoctlSetTermios(fd, unix.TCSETSW, tio); err != nil {
 		return err
 	}
 	return nil
