@@ -164,6 +164,7 @@ func (self *gui) loadUI() {
 
 			if self.currentPage != pageFolders {
 				self.showWarning("Not in folder view, cannot delete notes like this.")
+				return
 			}
 
 			// Check to make sure its deletable (ie. not a menu item)
@@ -229,15 +230,20 @@ func (self *gui) reloadNoteFolders() {
 
 			uilog.Log("Got folder name: %s", noteBookName)
 
-			self.app.Notes.NewBook(noteBookName)
+			err := self.app.Notes.NewBook(noteBookName)
+			if err != nil {
+				self.showWarning(fmt.Sprintf("failed to create new book: %s", err))
+				self.pages.RemovePage("request_name_form")
+				return
+			}
 
+			self.pages.RemovePage("request_name_form")
 			self.reloadNoteFolders()
 			self.app.IndexNeedsUpdating = true
-			self.pages.RemovePage("request_name_form")
 		}).
 			AddButton("Cancel", func() {
-				self.ui.Stop()
-				self.loadUI()
+				self.pages.RemovePage("request_name_form")
+				self.reloadNoteFolders()
 			})
 
 		self.pages.AddAndSwitchToPage("request_name_form", form, true)

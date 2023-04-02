@@ -39,6 +39,7 @@
  - [ ] When uploading attachments, should be a way to specify which folder it should be uploaded to, not just the current/last selected
  - [ ] Add window view for errors
  - [ ] Deleting a note folder does not delete the directory, maybe thats okay for backup
+ - [ ] Add key binding to select folder as default
 
 ## v3 (not even started)
  - [ ] Be diff based for even faster performance (maybe, probaly not needed at all, v2 is fine)

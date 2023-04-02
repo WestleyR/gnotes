@@ -507,9 +507,18 @@ func (book *Book) NewNote(noteDir string, completion func()) error {
 	return book.NewNoteWithContentsOfFile(noteDir, "", completion)
 }
 
+var ErrBookExists = errors.New("book already exists")
+
 func (noteBook *NoteBook) NewBook(name string) error {
 	if name == "" {
 		return fmt.Errorf("name cannot be empty")
+	}
+
+	// Make sure it does not already exist
+	for _, b := range noteBook.Books {
+		if b.Name == name {
+			return ErrBookExists
+		}
 	}
 
 	newBook := &Book{
